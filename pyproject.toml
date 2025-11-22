@@ -1,0 +1,17 @@
+[project]
+name = "46750_assignment_2"
+version = "0.1.0"
+description = "This is the code for assigment 2 in 46750"
+authors = [{ name = "s203684" }]
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "pandas",
+    "numpy",
+    "matplotlib",
+    "scikit-learn",
+    "pyomo",
+    "gurobipy",
+]
+
+[tool.uv]
