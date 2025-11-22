@@ -52,5 +52,16 @@ uv sync
 ## Data
 The data is synthetic and created via historical data, renewables ninja and the following sources
 
+https://markets.businessinsider.com/commodities/coal-price
+https://www.energidataservice.dk/tso-gas/GasDailyBalancingPrice
+https://www.renewables.ninja/
+https://www.gem.wiki/Coal_power_technologies?utm_source=chatgpt.com
+https://energyeducation.ca/encyclopedia/Supercritical_coal_plant?utm_source=chatgpt.com
+https://www.idc-online.com/technical_references/pdfs/civil_engineering/Supercritical_coal_fired_power_plant.pdf?utm_source=chatgpt.com
+https://iea-etsap.org/E-TechDS/PDF/E02-gas_fired_power-GS-AD-gct_FINAL.pdf?utm_source=chatgpt.com
+https://www.acer.europa.eu/sites/default/files/documents/Official_documents/Acts_of_the_Agency/Opinions/Documents/ACERs%20Opinion%2022-2019%20examples%20of%20calculation.pdf?utm_source=chatgpt.com
+https://thundersaidenergy.com/downloads/gas-to-power-project-economics/?utm_source=chatgpt.com
+https://www.volker-quaschning.de/datserv/CO2-spez/index_e.php?utm_source=chatgpt.com
+https://www.gem.wiki/Estimating_carbon_dioxide_emissions_from_gas_plants?utm_source=chatgpt.com
 
 ## Usage Examples
