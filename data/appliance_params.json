@@ -1,0 +1,45 @@
+{
+  "DER": [
+    {
+      "DER_id": "COAL_01",
+      "DER_type": "COAL",
+      "max_power_kW": 600000,
+      "min_power_ratio": 0.45,
+      "max_ramp_rate_up_ratio": 0.05,
+      "max_ramp_rate_down_ratio": 0.05,
+      "efficiency": 0.42,
+      "CO2_per_kWh": 0.85
+    },
+    {
+      "DER_id": "GAS_01",
+      "DER_type": "GAS_CCGT",
+      "max_power_kW": 400000,
+      "min_power_ratio": 0.20,
+      "max_ramp_rate_up_ratio": 0.20,
+      "max_ramp_rate_down_ratio": 0.20,
+      "efficiency": 0.58,
+      "CO2_per_kWh": 0.33
+    },
+    {
+      "DER_id": "WIND_01",
+      "DER_type": "WIND",
+      "max_power_kW": 150000,
+      "min_power_ratio": 0.0,
+      "max_ramp_rate_up_ratio": 1.0,
+      "max_ramp_rate_down_ratio": 1.0,
+      "efficiency": 1.0,
+      "CO2_per_kWh": 0.0
+    },
+    {
+      "DER_id": "SOLAR_01",
+      "DER_type": "SOLAR_PV",
+      "max_power_kW": 100000,
+      "min_power_ratio": 0.0,
+      "max_ramp_rate_up_ratio": 1.0,
+      "max_ramp_rate_down_ratio": 1.0,
+      "efficiency": 1.0,
+      "CO2_per_kWh": 0.0
+    }
+
+  ]
+}

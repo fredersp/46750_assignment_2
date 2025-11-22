@@ -49,4 +49,8 @@ uv sync
 
 ## Script Overview
 
+## Data
+The data is synthetic and created via historical data, renewables ninja and the following sources
+
+
 ## Usage Examples
