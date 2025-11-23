@@ -50,6 +50,8 @@ uv sync
 ## Script Overview
 
 ## Data
+
+### Sources
 The data is synthetic and created via historical data, renewables ninja and the following sources
 
 https://markets.businessinsider.com/commodities/coal-price
@@ -63,5 +65,7 @@ https://www.acer.europa.eu/sites/default/files/documents/Official_documents/Acts
 https://thundersaidenergy.com/downloads/gas-to-power-project-economics/?utm_source=chatgpt.com
 https://www.volker-quaschning.de/datserv/CO2-spez/index_e.php?utm_source=chatgpt.com
 https://www.gem.wiki/Estimating_carbon_dioxide_emissions_from_gas_plants?utm_source=chatgpt.com
+https://icapcarbonaction.com/en/ets-prices
+
 
 ## Usage Examples

@@ -1,0 +1,57 @@
+import os
+import pandas as pd
+
+def load_csv_data(file_name: str, header: int = 0):
+    """
+    Load a CSV file into a pandas DataFrame.
+
+    Parameters:
+    - file_name: str - The name of the CSV file to load.
+    - header: int - The row number to use as the column names.
+
+    Returns:
+    - pd.DataFrame - The loaded data as a DataFrame.
+    """
+    # Path to the folder containing this script
+    BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+
+    # Navigate to data directory
+    data_path = os.path.join(BASE_DIR, "..", "data")
+    data_path = os.path.abspath(data_path)
+    
+    df = pd.read_csv(data_path + '\\' + file_name, header=header)
+    
+    
+    return df
+
+def load_json_data(file_name: str):
+    """
+    Load a JSON file into a pandas DataFrame.
+
+    Parameters:
+    - file_name: str - The name of the JSON file to load.
+
+    Returns:
+    - pd.DataFrame - The loaded data as a DataFrame.
+    """
+    # Path to the folder containing this script
+    BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+
+    # Navigate to data directory
+    data_path = os.path.join(BASE_DIR, "..", "data")
+    data_path = os.path.abspath(data_path)
+    
+    df = pd.read_json(data_path + '\\' + file_name)
+    
+    return df
+
+
+
+
+if __name__ == "__main__":
+    
+    # Example usage
+    ets_data = load_csv_data("ETSDailyPrices.csv", header=1)
+    
+    print(ets_data.head())
+    
