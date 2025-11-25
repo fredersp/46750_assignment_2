@@ -1,8 +1,10 @@
 import pandas as pd
 from datetime import datetime
-from data_preparation import DataPreparationDeterministic
+from data_preparation import DataPreparationCSV, DataPreparationJSON 
 
-data = DataPreparationDeterministic(datetime(2024,1,1), datetime(2024,12,31),
+
+# Load data files and prepare the dataset for timeseries
+data = DataPreparationCSV(datetime(2024,1,1), datetime(2024,12,31),
         coal_file_name="CoalDailyPrices.csv",
         ets_file_name="ETSDailyPrices.csv",
         gas_file_name="GasDailyBalancingPrice.csv",
@@ -10,5 +12,11 @@ data = DataPreparationDeterministic(datetime(2024,1,1), datetime(2024,12,31),
         pv_file_name="pv_power_prod.csv"
     )
 
-df = data.build()
-print(df.head())
+df_t = data.build()
+
+params = DataPreparationJSON("appliance_params.json", "storage_params.json")
+df_app = params.appliance_data_preparation()
+df_stor = params.storage_data_preparation()
+
+
+

@@ -6,13 +6,32 @@ class Expando(object):
 
     pass
 
+class DataPreparationJSON:
+    def __init__(self, app_params_file: str, stor_params_file: str):
+        self.app_params = load_json_data(app_params_file)
+        self.stor_params = load_json_data(stor_params_file)
+    
+    
+    def appliance_data_preparation(self):
+        
+        data = self.app_params
+        df_app = pd.json_normalize(data['DER'])
+        
+        
+        
+        return df_app
+    
+    def storage_data_preparation(self):
+        
+        data = self.stor_params
+        df_stor = pd.json_normalize(data['fuel_storage'])
+        
+        return df_stor
 
 
 
 
-
-
-class DataPreparationDeterministic:
+class DataPreparationCSV:
     
     def __init__(self, start_date: str, end_date: str, coal_file_name: str, ets_file_name: str, gas_file_name: str, 
                  wind_file_name: str, pv_file_name: str):
@@ -167,7 +186,7 @@ class DataPreparationDeterministic:
 if __name__ == "__main__":
     
     # Example usage
-    data_prep = DataPreparationDeterministic(datetime(2024,1,1), datetime(2024,12,31),
+    data_prep = DataPreparationCSV(datetime(2024,1,1), datetime(2024,12,31),
         coal_file_name="CoalDailyPrices.csv",
         ets_file_name="ETSDailyPrices.csv",
         gas_file_name="GasDailyBalancingPrice.csv",
@@ -177,3 +196,11 @@ if __name__ == "__main__":
     
     df = data_prep.build()
     print(df)
+    
+    # Example usage 
+    data_prep2 = DataPreparationJSON("appliance_params.json", "storage_params.json")
+    df_params = data_prep2.appliance_data_preparation()
+    print(df_params)
+    df_stor = data_prep2.storage_data_preparation()
+    print(df_stor)
+    
