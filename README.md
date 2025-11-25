@@ -67,5 +67,8 @@ https://www.volker-quaschning.de/datserv/CO2-spez/index_e.php?utm_source=chatgpt
 https://www.gem.wiki/Estimating_carbon_dioxide_emissions_from_gas_plants?utm_source=chatgpt.com
 https://icapcarbonaction.com/en/ets-prices
 
+### Assumptions
+Missing values are filled by the nearest values, trading on ETS market is possible everyday. 
+Conversion rate from USD to EUR 
 
 ## Usage Examples

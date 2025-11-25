@@ -1,7 +1,7 @@
 import os
 import pandas as pd
 
-def load_csv_data(file_name: str, header: int = 0):
+def load_csv_data(file_name: str, header: int = 0, sep: str = ',', decimal: str = '.', skiprow: int = None):
     """
     Load a CSV file into a pandas DataFrame.
 
@@ -19,7 +19,7 @@ def load_csv_data(file_name: str, header: int = 0):
     data_path = os.path.join(BASE_DIR, "..", "data")
     data_path = os.path.abspath(data_path)
     
-    df = pd.read_csv(data_path + '\\' + file_name, header=header)
+    df = pd.read_csv(data_path + '\\' + file_name, header=header, sep=sep, decimal=decimal, skiprows= skiprow)
     
     
     return df

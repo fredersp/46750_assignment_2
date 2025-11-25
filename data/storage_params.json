@@ -1,0 +1,16 @@
+{
+  "fuel_storage": [
+    {
+      "storage_id": "COAL_STORE_01",
+      "fuel_type": "coal",
+      "linked_DER_id": "COAL_01",
+      "capacity_kWh_fuel": 1005000000
+    },
+    {
+      "storage_id": "GAS_STORE_01",
+      "fuel_type": "natural_gas",
+      "linked_DER_id": "GAS_01",
+      "capacity_kWh_fuel": 2500000
+    }
+  ]
+}
