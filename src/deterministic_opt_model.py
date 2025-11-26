@@ -43,17 +43,20 @@ class DeterministicModel():
 
     def __init__(self, input_data: InputData, name: str = "Deterministic Optimization Model", days: int = 366):
         self.data = input_data
-        self.days = days
+        # keep numeric day count and an iterable range for loops
+        self.n_days = int(days)
+        self.days = range(self.n_days)
         self.name = name
         self.results = Expando()
         self._build_model()
 
     def _build_variables(self):
-        self.variables = [
-        [self.model.addVar(name=f"{v}_{t}") for t in self.days]
-        for v in self.data.variables
-    ]
-
+        # build a dict mapping variable name -> list(vars over time)
+        self.variables = {
+            v: [self.model.addVar(name=f"{v}_{t}") for t in self.days]
+            for v in self.data.variables
+        }
+    
     def _build_constraints(self):
 
         # Annual demand constraint
@@ -78,14 +81,14 @@ class DeterministicModel():
         self.storage_gas = [self.model.addLConstr(
              self.variables['Q_GAS_BUY'][t] + self.variables['Q_GAS_STORAGE'][t-1] - (self.variables['P_GAS'][t] / self.data.efficiencies['eta_GAS']), GRB.EQUAL, self.variables['Q_GAS_STORAGE'][t]
             )
-            for t in range(1, self.days)
+            for t in range(1, self.n_days)
         ]
                         
         
         self.storage_coal = [self.model.addLConstr(
              self.variables['Q_COAL_BUY'][t] + self.variables['Q_COAL_STORAGE'][t-1] - (self.variables['P_COAL'][t] / self.data.efficiencies['eta_COAL']), GRB.EQUAL, self.variables['Q_COAL_STORAGE'][t] 
             )
-            for t in range(1, self.days)
+            for t in range(1, self.n_days)
         ]
         
         # Initial storage level constraints
@@ -98,15 +101,15 @@ class DeterministicModel():
         )
         
         self.final_storage_gas = self.model.addLConstr(
-            self.variables['Q_GAS_STORAGE'][self.days - 1], GRB.EQUAL, self.data.starting_storage_levels['Q_GAS_STORAGE']
+            self.variables['Q_GAS_STORAGE'][self.n_days - 1], GRB.EQUAL, self.data.starting_storage_levels['Q_GAS_STORAGE']
         )
         
         self.final_storage_coal = self.model.addLConstr(
-            self.variables['Q_COAL_STORAGE'][self.days - 1], GRB.EQUAL, self.data.starting_storage_levels['Q_COAL_STORAGE']
+            self.variables['Q_COAL_STORAGE'][self.n_days - 1], GRB.EQUAL, self.data.starting_storage_levels['Q_COAL_STORAGE']
         )
         # CO2 Emission
         self.CO2_emission = self.model.addLConstr(
-            gp.quicksum(self.variables['P_GAS'][t] * self.data.co2_per_kWh['CO2_per_kWh_GAS'] + self.variables['P_COAL'][t] * self.data.co2_per_kWh['CO2_per_kWh_COAL'] for t in self.days), GRB.LESS_EQUAL, gp.quicksum(self.variables['Q_EUA'][t] for t in self.days)
+            gp.quicksum(self.variables['P_GAS'][t] * self.data.co2_per_kWh['CO2_per_kWh_GAS'] + self.variables['P_COAL'][t] * self.data.co2_per_kWh['CO2_per_kWh_COAL'] for t in self.days), GRB.GREATER_EQUAL, gp.quicksum(self.variables['Q_EUA'][t] for t in self.days)
         )
         
         # Mqximum production constraints
@@ -124,24 +127,24 @@ class DeterministicModel():
         
         # Maximum production constrainted by resource availability
         self.max_prod_GAS = [ self.model.addLConstr(
-            self.variables['P_GAS'][t], GRB.LESS_EQUAL, self.efficiencies['eta_GAS'] * (self.variables['Q_GAS_STORAGE'][t-1] + self.variables['Q_GAS_BUY'][t])
+            self.variables['P_GAS'][t], GRB.LESS_EQUAL, self.data.efficiencies['eta_GAS'] * (self.variables['Q_GAS_STORAGE'][t-1] + self.variables['Q_GAS_BUY'][t])
         ) 
-            for t in range(1, self.days)
+            for t in range(1, self.n_days)
         ]
         
         self.max_prod_COAL = [ self.model.addLConstr(
-            self.variables['P_COAL'][t], GRB.LESS_EQUAL, self.efficiencies['eta_COAL'] * (self.variables['Q_COAL_STORAGE'][t-1] + self.variables['Q_COAL_BUY'][t])
+            self.variables['P_COAL'][t], GRB.LESS_EQUAL, self.data.efficiencies['eta_COAL'] * (self.variables['Q_COAL_STORAGE'][t-1] + self.variables['Q_COAL_BUY'][t])
         ) 
-            for t in range(1, self.days)
+            for t in range(1, self.n_days)
         ]
         
         # Initial maximum production constrainted by resource availability
         self.max_prod_GAS_init = self.model.addLConstr(
-            self.variables['P_GAS'][0], GRB.LESS_EQUAL, self.efficiencies['eta_GAS'] * (self.data.starting_storage_levels['Q_GAS_STORAGE'] + self.variables['Q_GAS_BUY'][0])
+            self.variables['P_GAS'][0], GRB.LESS_EQUAL, self.data.efficiencies['eta_GAS'] * (self.data.starting_storage_levels['Q_GAS_STORAGE'] + self.variables['Q_GAS_BUY'][0])
         )
         
         self.max_prod_COAL_init = self.model.addLConstr(
-            self.variables['P_COAL'][0], GRB.LESS_EQUAL, self.efficiencies['eta_COAL'] * (self.data.starting_storage_levels['Q_COAL_STORAGE'] + self.variables['Q_COAL_BUY'][0])
+            self.variables['P_COAL'][0], GRB.LESS_EQUAL, self.data.efficiencies['eta_COAL'] * (self.data.starting_storage_levels['Q_COAL_STORAGE'] + self.variables['Q_COAL_BUY'][0])
         )
         
         self.max_prod_wind = [ self.model.addLConstr(
@@ -176,9 +179,16 @@ class DeterministicModel():
 
 
     def _build_objective(self):
+        # objective: minimise fuel & EUA purchase costs over time
         self.model.setObjective(
-            gp.quicksum(self.variables['Q_GAS_BUY'][t] * self.data.gas_prices[t] + self.variables['Q_COAL_BUY'] * self.data.coal_prices + self.variables['Q_EUA'] * self.data.eua_prices for t in self.days), 
-            GRB.MINIMIZE)
+            gp.quicksum(
+                self.variables['Q_GAS_BUY'][t] * self.data.gas_prices[t]
+                + self.variables['Q_COAL_BUY'][t] * self.data.coal_prices[t]
+                + self.variables['Q_EUA'][t] * self.data.eua_prices[t]
+                for t in self.days
+            ),
+            GRB.MINIMIZE
+        )
 
 
     def _build_model(self):
@@ -191,8 +201,9 @@ class DeterministicModel():
     
     def _save_results(self):
         self.results.obj_val = self.model.ObjVal
-        self.results.var_vals = {(self.data.variables[v], t): self.variables[v][t].x
-                         for v in range(len(self.data.variables)) for t in self.days}
+        # save variable values as dict keyed by (var_name, t)
+        self.results.var_vals = {(v, t): self.variables[v][t].x
+                                 for v in self.data.variables for t in self.days}
         # please return the dual values for all constraints
         # self.results.dual_vals = {
         #     'upper_power': [self.upper_power[i].Pi for i in range(len(self.upper_power))],
