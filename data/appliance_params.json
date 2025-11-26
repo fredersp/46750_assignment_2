@@ -1,7 +1,7 @@
 {
   "DER": [
     {
-      "DER_id": "COAL_01",
+      "DER_id": "P_COAL",
       "DER_type": "COAL",
       "max_power_kW": 600000,
       "min_power_ratio": 0.45,
@@ -11,7 +11,7 @@
       "CO2_per_kWh": 0.85
     },
     {
-      "DER_id": "GAS_01",
+      "DER_id": "P_GAS",
       "DER_type": "GAS_CCGT",
       "max_power_kW": 400000,
       "min_power_ratio": 0.20,
@@ -21,7 +21,7 @@
       "CO2_per_kWh": 0.33
     },
     {
-      "DER_id": "WIND_01",
+      "DER_id": "P_WIND",
       "DER_type": "WIND",
       "max_power_kW": 150000,
       "min_power_ratio": 0.0,
@@ -31,7 +31,7 @@
       "CO2_per_kWh": 0.0
     },
     {
-      "DER_id": "SOLAR_01",
+      "DER_id": "P_PV",
       "DER_type": "SOLAR_PV",
       "max_power_kW": 100000,
       "min_power_ratio": 0.0,
