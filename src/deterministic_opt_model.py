@@ -109,7 +109,7 @@ class DeterministicModel():
         )
         # CO2 Emission
         self.CO2_emission = self.model.addLConstr(
-            gp.quicksum(self.variables['P_GAS'][t] * self.data.co2_per_kWh['CO2_per_kWh_GAS'] + self.variables['P_COAL'][t] * self.data.co2_per_kWh['CO2_per_kWh_COAL'] for t in self.days), GRB.GREATER_EQUAL, gp.quicksum(self.variables['Q_EUA'][t] for t in self.days)
+            gp.quicksum(self.variables['P_GAS'][t] * self.data.co2_per_kWh['CO2_per_kWh_GAS'] + self.variables['P_COAL'][t] * self.data.co2_per_kWh['CO2_per_kWh_COAL'] for t in self.days), GRB.EQUAL, gp.quicksum(self.variables['Q_EUA'][t] for t in self.days)
         )
         
         # Mqximum production constraints
@@ -228,3 +228,88 @@ class DeterministicModel():
         #print("Optimal dual values:")
         #print(self.results.dual_vals)
 
+
+    def plot_results(self):
+        import matplotlib.pyplot as plt
+
+        plt.figure(figsize=(12, 8))
+        
+        plt.plot(
+            self.days,
+            [self.results.var_vals[('P_GAS', t)] for t in self.days],
+            label='P_GAS'
+        )
+        
+        plt.plot(
+            self.days,
+            [self.results.var_vals[('P_COAL', t)] for t in self.days],
+            label='P_COAL'
+        )
+        
+        plt.plot(
+            self.days,
+            [self.results.var_vals[('P_WIND', t)] for t in self.days],
+            label='P_WIND'
+        )
+        
+        plt.plot(
+            self.days,
+            [self.results.var_vals[('P_PV', t)] for t in self.days],
+            label='P_PV'
+        )
+        
+        plt.xlabel('Day')
+        plt.ylabel('Power Production (kWh)')
+        plt.title('Optimal Power Production Over Time')
+        plt.legend()
+        plt.grid()
+        plt.show()
+        
+        plt.figure(figsize=(12, 8))
+        plt.bar(
+            self.days,
+            [self.results.var_vals[('Q_GAS_STORAGE', t)] for t in self.days],
+            label='Q_GAS_STORAGE'
+        )
+        plt.bar(
+            self.days,
+            [self.results.var_vals[('Q_COAL_STORAGE', t)] for t in self.days],
+            label='Q_COAL_STORAGE'
+        )
+        plt.xlabel('Day')
+        plt.ylabel('Storage Level (kWh)')
+        plt.title('Optimal Storage Levels Over Time')
+        plt.legend()
+        plt.grid()
+        plt.show()
+        
+        plt.figure(figsize=(12, 8))
+        plt.plot(
+            self.days,
+            [self.results.var_vals[('Q_GAS_BUY', t)] for t in self.days],
+            label='Q_GAS_BUY'
+        )
+        plt.plot(
+            self.days,
+            [self.results.var_vals[('Q_COAL_BUY', t)] for t in self.days],
+            label='Q_COAL_BUY'
+        )
+        plt.xlabel('Day')
+        plt.ylabel('Fuel Purchased (kWh)')
+        plt.title('Optimal Fuel Purchases Over Time')
+        plt.legend()
+        plt.grid()
+        plt.show()
+        
+        plt.figure(figsize=(12, 8))
+        plt.bar(
+            self.days,
+            [self.results.var_vals[('Q_EUA', t)] for t in self.days],
+            label='Q_EUA'
+        )
+        plt.xlabel('Day')
+        plt.ylabel('EUA Purchased (kgCO2eq)')
+        plt.title('Optimal EUA Purchases Over Time')
+        plt.legend()
+        plt.grid()
+        plt.show()

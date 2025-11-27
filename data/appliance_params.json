@@ -3,7 +3,7 @@
     {
       "DER_id": "P_COAL",
       "DER_type": "COAL",
-      "max_power_kW": 600000,
+      "max_power_kW": 75000,
       "min_power_ratio": 0.45,
       "max_ramp_rate_up_ratio": 0.05,
       "max_ramp_rate_down_ratio": 0.05,
@@ -13,7 +13,7 @@
     {
       "DER_id": "P_GAS",
       "DER_type": "GAS_CCGT",
-      "max_power_kW": 400000,
+      "max_power_kW": 45000,
       "min_power_ratio": 0.20,
       "max_ramp_rate_up_ratio": 0.20,
       "max_ramp_rate_down_ratio": 0.20,

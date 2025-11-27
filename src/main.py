@@ -25,7 +25,7 @@ variables = df_app['DER_id'].tolist() + df_stor['storage_id'].tolist() + ['Q_COA
 coal_prices = df_t['Coal_Price[EUR/KWh]'].tolist()
 gas_prices = df_t['Gas_Price[EUR/KWh]'].tolist()
 eua_prices = df_t['ETS_Price[EUR/kgCO2eq]'].tolist()
-rhs_demand = 10000000 # Placeholder for demand RHS
+rhs_demand = 1_001_000_000 # Placeholder for demand RHS
 # Dictionary to map coal and gas to their respective storage capacities
 rhs_storage = {
     'Q_COAL_STORAGE': df_stor.loc[df_stor['storage_id'] == 'Q_COAL_STORAGE', 'capacity_kWh_fuel'].values[0],
@@ -78,3 +78,4 @@ input_data = InputData(
 model = DeterministicModel(input_data)
 model.run()
 model.display_results()
+model.plot_results()
