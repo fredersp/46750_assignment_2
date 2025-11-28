@@ -100,6 +100,7 @@ class DeterministicModel():
             self.variables['Q_COAL_BUY'][0] + self.data.starting_storage_levels['Q_COAL_STORAGE'] - (self.variables['P_COAL'][0] / self.data.efficiencies['eta_COAL']), GRB.EQUAL, self.variables['Q_COAL_STORAGE'][0]
         )
         
+        # Final storage level constraints
         self.final_storage_gas = self.model.addLConstr(
             self.variables['Q_GAS_STORAGE'][self.n_days - 1], GRB.EQUAL, self.data.starting_storage_levels['Q_GAS_STORAGE']
         )
@@ -107,12 +108,13 @@ class DeterministicModel():
         self.final_storage_coal = self.model.addLConstr(
             self.variables['Q_COAL_STORAGE'][self.n_days - 1], GRB.EQUAL, self.data.starting_storage_levels['Q_COAL_STORAGE']
         )
+        
         # CO2 Emission
         self.CO2_emission = self.model.addLConstr(
             gp.quicksum(self.variables['P_GAS'][t] * self.data.co2_per_kWh['CO2_per_kWh_GAS'] + self.variables['P_COAL'][t] * self.data.co2_per_kWh['CO2_per_kWh_COAL'] for t in self.days), GRB.EQUAL, gp.quicksum(self.variables['Q_EUA'][t] for t in self.days)
         )
         
-        # Mqximum production constraints
+        # Maximum production constraints
         self.max_prod_COAL_cap = [ self.model.addLConstr(
             self.variables['P_COAL'][t], GRB.LESS_EQUAL, self.data.rhs_prod['P_COAL']
         )
@@ -224,7 +226,7 @@ class DeterministicModel():
         print("Optimal objective value:")
         print(self.results.obj_val)
         print("Optimal variable values:")
-        print(self.results.var_vals)
+        #print(self.results.var_vals)
         #print("Optimal dual values:")
         #print(self.results.dual_vals)
 

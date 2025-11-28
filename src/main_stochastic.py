@@ -1,7 +1,10 @@
 import pandas as pd
 from datetime import datetime
+import matplotlib.pyplot as plt
 from data_preparation import DataPreparationCSV, DataPreparationJSON 
-from deterministic_opt_model import DeterministicModel, InputData
+from stochastic_opt_model import StochasticModel, InputData
+import random
+random.seed(42)
 
 
 # Load data files and prepare the dataset for timeseries
@@ -25,7 +28,7 @@ variables = df_app['DER_id'].tolist() + df_stor['storage_id'].tolist() + ['Q_COA
 coal_prices = df_t['Coal_Price[EUR/KWh]'].tolist()
 gas_prices = df_t['Gas_Price[EUR/KWh]'].tolist()
 eua_prices = df_t['ETS_Price[EUR/kgCO2eq]'].tolist()
-rhs_demand = 1_001_000_000 # Placeholder for demand RHS
+rhs_demand = 501_000_000 # DO NOT CHANGE
 # Dictionary to map coal and gas to their respective storage capacities
 rhs_storage = {
     'Q_COAL_STORAGE': df_stor.loc[df_stor['storage_id'] == 'Q_COAL_STORAGE', 'capacity_kWh_fuel'].values[0],
@@ -75,7 +78,42 @@ input_data = InputData(
     starting_storage_levels
 )
 
-model = DeterministicModel(input_data)
+
+
+
+model = StochasticModel(input_data)
 model.run()
 model.display_results()
-model.plot_results()
+model._save_results()
+
+# extract scenario costs
+scenario_ids = list(model.results.obj_vals.keys())
+scenario_costs = [model.results.obj_vals[s] for s in scenario_ids]
+
+plt.figure(figsize=(8, 5))
+plt.bar(scenario_ids, scenario_costs, color="#4a90e2")
+plt.xlabel("Scenario")
+plt.ylabel("Objective value")
+plt.title("Scenario costs")
+plt.tight_layout()
+plt.show()
+
+# Plot histogram for each of the scenarios objective values
+
+
+# Plot gas prices for each scenario first 25 days
+# import matplotlib.pyplot as plt
+
+# for i, scenario in enumerate(scenarios):
+#     plt.plot(scenarios[i].eua_prices[:25], label=f'Scenario {i+1}')
+# plt.xlabel('Days')
+# plt.ylabel('Gas Prices [EUR/KWh]')
+# plt.title('Gas Price Scenarios')
+# plt.legend()
+# plt.show()
+
+# TODO: Implement ex post analysis 
+# TODO: Implement risk analysis (e.g., VaR, CVaR)
+# TODO: Look at scenario generation methods
+# TODO: Implement multi-stage stochastic problem
+# TODO: Introduce Non-Anticipativity constraints
