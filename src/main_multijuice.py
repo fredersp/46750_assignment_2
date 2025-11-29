@@ -2,7 +2,7 @@ import pandas as pd
 from datetime import datetime
 import matplotlib.pyplot as plt
 from data_preparation import DataPreparationCSV, DataPreparationJSON 
-from stochastic_opt_model import StochasticModel, InputData
+from multistage_stochastic_opt_model import StochasticModel, InputData
 import random
 random.seed(42)
 
@@ -87,16 +87,16 @@ model.display_results()
 model._save_results()
 
 # extract scenario costs
-scenario_ids = list(model.results.obj_vals.keys())
-scenario_costs = [model.results.obj_vals[s] for s in scenario_ids]
+# scenario_ids = list(model.results.obj_vals.keys())
+# scenario_costs = [model.results.obj_vals[s] for s in scenario_ids]
 
-plt.figure(figsize=(8, 5))
-plt.bar(scenario_ids, scenario_costs, color="#4a90e2")
-plt.xlabel("Scenario")
-plt.ylabel("Objective value")
-plt.title("Scenario costs")
-plt.tight_layout()
-plt.show()
+# plt.figure(figsize=(8, 5))
+# plt.bar(scenario_ids, scenario_costs, color="#4a90e2")
+# plt.xlabel("Scenario")
+# plt.ylabel("Objective value")
+# plt.title("Scenario costs")
+# plt.tight_layout()
+# plt.show()
 
 # Plot histogram for each of the scenarios objective values
 
