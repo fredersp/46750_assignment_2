@@ -88,7 +88,7 @@ class ScenarioGenerator:
 
 class StochasticModel():
 
-    def __init__(self, input_data: InputData, name: str = "Stochastic Optimization Model", days: int = 366, n_scenario: int = 10, n_stages: int = 2):
+    def __init__(self, input_data: InputData, name: str = "Stochastic Optimization Model", days: int = 366, n_scenario: int = 10, n_stages: int = 3):
         self.data = input_data
         # keep numeric day count and an iterable range for loops
         self.n_days = int(days)
@@ -324,11 +324,20 @@ class StochasticModel():
         for t in self.days
         for n, node in enumerate(self.tree)
         ]
-        
-        #Non-anticipative constraints
-        
-        
 
+        #Non-anticipative constraints
+        for stage_cutoff in self.k:
+            for t in range(int(stage_cutoff)):
+                for v in self.data.variables:
+                    for n1, node1 in enumerate(self.tree):
+                        if node1['stage'] > 0 and node1['path'][-1] >= 0:
+                            parent_path = node1['parent']
+                            for n2, node2 in enumerate(self.tree):
+                                if node2['path'] == parent_path:
+                                    self.model.addLConstr(
+                                        self.variables[v][t][n1] - self.variables[v][t][n2], GRB.EQUAL, 0
+                                    )
+    
         ### All variables are automtically set to be greater than or equal to zero
 
 
