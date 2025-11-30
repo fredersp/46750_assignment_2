@@ -29,6 +29,7 @@ coal_prices = df_t['Coal_Price[EUR/KWh]'].tolist()
 gas_prices = df_t['Gas_Price[EUR/KWh]'].tolist()
 eua_prices = df_t['ETS_Price[EUR/kgCO2eq]'].tolist()
 rhs_demand = 501_000_000 # DO NOT CHANGE
+
 # Dictionary to map coal and gas to their respective storage capacities
 rhs_storage = {
     'Q_COAL_STORAGE': df_stor.loc[df_stor['storage_id'] == 'Q_COAL_STORAGE', 'capacity_kWh_fuel'].values[0],

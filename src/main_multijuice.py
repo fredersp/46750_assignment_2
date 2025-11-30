@@ -79,18 +79,50 @@ input_data = InputData(
 )
 
 
-
-
 model = StochasticModel(input_data)
 model.run()
 model.display_results()
 model._save_results()
 
-# extract scenario costs
+# Save objective values to list and create box plot
+obj_vals_list = list(model.results.obj_vals.values())
+
+plt.figure(figsize=(8, 6))
+plt.boxplot(obj_vals_list)
+plt.ylabel("Objective Value [EUR]")
+plt.title("Distribution of Scenario Costs")
+plt.tight_layout()
+plt.show()
+
+# plot the distrubtion of the objective values
+import numpy as np
+import matplotlib.pyplot as plt
+from scipy.stats import scoreatpercentile
+
+plt.figure(figsize=(10, 6))
+plt.hist(obj_vals_list, bins=30, color="#4a90e2", edgecolor='black', alpha=0.7)
+plt.xlabel("Objective Value [EUR]")
+plt.ylabel("Frequency")
+plt.title("Distribution of Objective Values Across Scenarios")
+# Calculate CVaR at 90%
+alpha = 90
+cvar_90 = np.mean([cost for cost in obj_vals_list if cost >= scoreatpercentile(obj_vals_list, alpha)])
+plt.axvline(cvar_90, color='red', linestyle='dashed', linewidth=2, label=f'CVaR at {alpha}%: {cvar_90:.2f} EUR')
+plt.legend()
+plt.tight_layout()
+plt.show()
+
+
+
+# Please create a plot that shows the distribution of the objective values across all scenarios and compute the CVaR at 90%
+# import matplotlib.pyplot as plt
 # scenario_ids = list(model.results.obj_vals.keys())
 # scenario_costs = [model.results.obj_vals[s] for s in scenario_ids]
 
-# plt.figure(figsize=(8, 5))
+
+
+
+
 # plt.bar(scenario_ids, scenario_costs, color="#4a90e2")
 # plt.xlabel("Scenario")
 # plt.ylabel("Objective value")

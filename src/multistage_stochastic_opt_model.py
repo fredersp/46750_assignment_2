@@ -88,7 +88,7 @@ class ScenarioGenerator:
 
 class StochasticModel():
 
-    def __init__(self, input_data: InputData, name: str = "Stochastic Optimization Model", days: int = 366, n_scenario: int = 10, n_stages: int = 3):
+    def __init__(self, input_data: InputData, name: str = "Stochastic Optimization Model", days: int = 366, n_scenario: int = 1000, n_stages: int = 1):
         self.data = input_data
         # keep numeric day count and an iterable range for loops
         self.n_days = int(days)
@@ -356,6 +356,8 @@ class StochasticModel():
             ),
             GRB.MINIMIZE
         )
+    
+    
 
 
     def _build_model(self):
@@ -368,21 +370,130 @@ class StochasticModel():
     
     def _save_results(self):
         self.results.obj_val = self.model.ObjVal
-    #     self.results.obj_vals = {
-    #         s: gp.quicksum(
-    #             self.variables['Q_GAS_BUY'][t][s].x * self.scenarios[s].gas_prices[t]
-    #             + self.variables['Q_COAL_BUY'][t][s].x * self.scenarios[s].coal_prices[t]
-    #             + self.variables['Q_EUA'][t][s].x * self.scenarios[s].eua_prices[t]
-    #             for t in self.days
-    #         ).getValue()   # convert LinExpr to float
-    #         for s in self.n_scenario
-    # }
+        self.results.obj_vals = {
+             n: gp.quicksum(
+                 self.variables['Q_GAS_BUY'][t][n].x * node['data'].gas_prices[t]
+                 + self.variables['Q_COAL_BUY'][t][n].x * node['data'].coal_prices[t]
+                 + self.variables['Q_EUA'][t][n].x * node['data'].eua_prices[t]
+                 for t in self.days
+             ).getValue()   # convert LinExpr to float
+             for n, node in enumerate(self.tree)
+    }
         self.results.var_vals = {
         (v, t, n): self.variables[v][t][n].x
         for v in self.variables
         for t in self.days
         for n, node in enumerate(self.tree)
     }
+
+    def ex_post_analysis(self, use_results=True):
+        """Perform ex-post analysis (realized costs) per terminal scenario (leaf).
+
+        - use_results: when True uses self.results.var_vals (requires run() to have been called)
+          otherwise reads variable .x values directly from Gurobi model objects.
+
+        Returns: dict mapping leaf node index -> {
+            'path', 'total_cost', 'per_stage_cost', 'n_days'
+        } and stores into self.results.ex_post.
+        """
+        # ensure we have solution values
+        if use_results and not hasattr(self.results, 'var_vals'):
+            raise ValueError("No stored solution values found — call run() before ex_post_analysis() or set use_results=False to read model variables directly")
+
+        # helper to read a variable value
+        def var_value(v, t, n):
+            if use_results:
+                return self.results.var_vals.get((v, t, n), 0.0)
+            # fallback: read from gurobi Var object
+            return float(self.variables[v][t][n].x)
+
+        # map (stage, path) -> index for fast lookup
+        path_stage_to_index = {(node['stage'], node['path']): idx for idx, node in enumerate(self.tree)}
+
+        # compute integer stage cutoffs and stage ranges
+        boundaries = [int(c) for c in self.k]
+        stage_ranges = []
+        prev = 0
+        for b in boundaries:
+            stage_ranges.append(range(prev, b))
+            prev = b
+        stage_ranges.append(range(prev, self.n_days))
+
+        # helper: get stage for a time t
+        def stage_for_t(t):
+            for s, r in enumerate(stage_ranges):
+                if t in r:
+                    return s
+            # fallback to last stage
+            return len(stage_ranges) - 1
+
+        # determine leaf nodes (terminal stage)
+        leaf_nodes = [(idx, node) for idx, node in enumerate(self.tree) if node['stage'] == self.stages - 1]
+
+        ex_post = {}
+
+        for leaf_idx, leaf_node in leaf_nodes:
+            path = leaf_node['path']
+            data = leaf_node['data']
+            total_cost = 0.0
+            per_stage_cost = [0.0 for _ in range(self.stages)]
+
+            for t in range(self.n_days):
+                s = stage_for_t(t)
+                # node index corresponding to that stage and prefix path
+                prefix = path[: s + 1]
+                key = (s, prefix)
+                if key not in path_stage_to_index:
+                    # defensive: if missing, skip
+                    continue
+                node_idx = path_stage_to_index[key]
+
+                # purchases drive the objective in the deterministic formulation
+                # we look for variables that represent purchases: 'Q_GAS_BUY', 'Q_COAL_BUY', 'Q_EUA'
+                # these carry unit costs in the scenario data
+                # Q_GAS_BUY
+                if 'Q_GAS_BUY' in self.variables:
+                    q = var_value('Q_GAS_BUY', t, node_idx)
+                    price = data.gas_prices[t]
+                    c = q * price
+                    total_cost += c
+                    per_stage_cost[s] += c
+
+                if 'Q_COAL_BUY' in self.variables:
+                    q = var_value('Q_COAL_BUY', t, node_idx)
+                    price = data.coal_prices[t]
+                    c = q * price
+                    total_cost += c
+                    per_stage_cost[s] += c
+
+                if 'Q_EUA' in self.variables:
+                    q = var_value('Q_EUA', t, node_idx)
+                    price = data.eua_prices[t]
+                    c = q * price
+                    total_cost += c
+                    per_stage_cost[s] += c
+
+            ex_post[leaf_idx] = {
+                'path': path,
+                'total_cost': total_cost,
+                'per_stage_cost': per_stage_cost,
+                'n_days': self.n_days,
+            }
+
+        # store summary
+        self.results.ex_post = ex_post
+
+        # compute some aggregate statistics (mean/std) if leaves exist
+        if ex_post:
+            import statistics
+            costs = [v['total_cost'] for v in ex_post.values()]
+            self.results.ex_post_summary = {
+                'mean_cost': statistics.mean(costs),
+                'stdev_cost': statistics.pstdev(costs) if len(costs) > 1 else 0.0,
+                'n_scenarios': len(costs)
+            }
+
+        return ex_post
 
         
         # please return the dual values for all constraints
@@ -406,6 +517,14 @@ class StochasticModel():
         print(self.results.obj_val)
         print("Optimal variable values:")
         #print(self.results.var_vals)
+        # optionally print ex-post summary if available
+        if hasattr(self.results, 'ex_post_summary'):
+            s = self.results.ex_post_summary
+            print()
+            print("--- Ex-post summary across terminal scenarios ---")
+            print(f"Scenarios: {s['n_scenarios']}")
+            print(f"Mean realized cost: {s['mean_cost']:.2f}")
+            print(f"Population stdev of realized cost: {s['stdev_cost']:.2f}")
         #print("Optimal dual values:")
         #print(self.results.dual_vals)
 
