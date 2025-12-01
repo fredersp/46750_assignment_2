@@ -4,6 +4,8 @@ import matplotlib.pyplot as plt
 from data_preparation import DataPreparationCSV, DataPreparationJSON 
 from stochastic_opt_model import StochasticModel, InputData
 import random
+import numpy as np
+from plotter import plot_histogram
 random.seed(42)
 
 
@@ -24,7 +26,7 @@ df_stor = params.storage_data_preparation()
 
 
 
-variables = df_app['DER_id'].tolist() + df_stor['storage_id'].tolist() + ['Q_COAL_BUY', 'Q_GAS_BUY', 'Q_EUA']
+variables = df_app['DER_id'].tolist() + df_stor['storage_id'].tolist() + ['Q_COAL_BUY', 'Q_GAS_BUY', 'Q_EUA_BUY']
 coal_prices = df_t['Coal_Price[EUR/KWh]'].tolist()
 gas_prices = df_t['Gas_Price[EUR/KWh]'].tolist()
 eua_prices = df_t['ETS_Price[EUR/kgCO2eq]'].tolist()
@@ -82,40 +84,36 @@ input_data = InputData(
 
 
 
-model = StochasticModel(input_data)
+model = StochasticModel(input_data, n_scenario=100)
 model.run()
 model.display_results()
 model._save_results()
-
-# extract scenario costs
-scenario_ids = list(model.results.obj_vals.keys())
-scenario_costs = [model.results.obj_vals[s] for s in scenario_ids]
-
-plt.figure(figsize=(8, 5))
-plt.bar(scenario_ids, scenario_costs, color="#4a90e2")
-plt.xlabel("Scenario")
-plt.ylabel("Objective value")
-plt.title("Scenario costs")
-plt.tight_layout()
-plt.show()
-
-# Plot histogram for each of the scenarios objective values
+model.plot_results()
 
 
-# Plot gas prices for each scenario first 25 days
-# import matplotlib.pyplot as plt
+# Save objective values to list and create box plot
+obj_vals_list = list(model.results.obj_vals.values())
+plot_histogram(
+    obj_vals_list,
+    xlabel="Objective Value [EUR]",
+    ylabel="Frequency",
+    title="Distribution of Objective Values Across Scenarios",
+    bins=50
+)
 
-# for i, scenario in enumerate(scenarios):
-#     plt.plot(scenarios[i].eua_prices[:25], label=f'Scenario {i+1}')
-# plt.xlabel('Days')
-# plt.ylabel('Gas Prices [EUR/KWh]')
-# plt.title('Gas Price Scenarios')
-# plt.legend()
-# plt.show()
+# Perform ex post analysis
+model.ex_post_analysis()
+# Plot histogram of ex-post objective values
+plot_histogram(
+    model.results.ex_post_obj_vals,
+    xlabel="Ex Post Objective Value [EUR]",
+    ylabel="Frequency",
+    title="Distribution of Ex Post Objective Values Across Out-of-Sample Scenarios",
+    bins=50
+)
 
-# TODO: Implement ex post analysis 
-# TODO: Implement risk analysis (e.g., VaR, CVaR)
-# TODO: Look at scenario generation methods
+
+
 # TODO: Implement multi-stage stochastic problem
 # TODO: Introduce Non-Anticipativity constraints
 # TODO: Introduce selling EUA allowances

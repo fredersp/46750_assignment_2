@@ -4,3 +4,4 @@ matplotlib
 scikit-learn
 pyomo
 gurobipy
+seaborn

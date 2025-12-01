@@ -325,7 +325,7 @@ class StochasticModel():
         for n, node in enumerate(self.tree)
         ]
 
-        #Non-anticipative constraints
+        # Non-anticipative constraints
         for stage_cutoff in self.k:
             for t in range(int(stage_cutoff)):
                 for v in self.data.variables:
@@ -343,19 +343,22 @@ class StochasticModel():
 
 
     def _build_objective(self):
-        #prob = [node["prob"] for node in self.tree]
+
         self.model.setObjective(
             gp.quicksum(
-                1/(len(self.n_scenario)**self.stages) * gp.quicksum(
+                node["prob"] *
+                gp.quicksum(
                     self.variables['Q_GAS_BUY'][t][n] * node['data'].gas_prices[t]
                     + self.variables['Q_COAL_BUY'][t][n] * node['data'].coal_prices[t]
                     + self.variables['Q_EUA'][t][n] * node['data'].eua_prices[t]
                     for t in self.days
                 )
                 for n, node in enumerate(self.tree)
+                if node["stage"] == self.stages - 1   # ONLY LEAVES
             ),
             GRB.MINIMIZE
         )
+
     
     
 

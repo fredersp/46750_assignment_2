@@ -12,6 +12,7 @@ dependencies = [
     "scikit-learn",
     "pyomo",
     "gurobipy",
+    "seaborn",
 ]
 
 [tool.uv]

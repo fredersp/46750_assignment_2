@@ -4,8 +4,8 @@
       "storage_id": "Q_COAL_STORAGE",
       "fuel_type": "coal",
       "linked_DER_id": "COAL_01",
-      "capacity_kWh_fuel": 10050000,
-      "starting_level_kWh_fuel": 5025000
+      "capacity_kWh_fuel": 505000,
+      "starting_level_kWh_fuel": 252500
     },
     {
       "storage_id": "Q_GAS_STORAGE",

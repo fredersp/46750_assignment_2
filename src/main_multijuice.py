@@ -79,7 +79,7 @@ input_data = InputData(
 )
 
 
-model = StochasticModel(input_data)
+model = StochasticModel(input_data, n_scenario=10, n_stages=1)
 model.run()
 model.display_results()
 model._save_results()
@@ -147,6 +147,4 @@ plt.show()
 # TODO: Implement ex post analysis 
 # TODO: Implement risk analysis (e.g., VaR, CVaR)
 # TODO: Look at scenario generation methods
-# TODO: Implement multi-stage stochastic problem
-# TODO: Introduce Non-Anticipativity constraints
 # TODO: Introduce selling EUA allowances
