@@ -1,6 +1,7 @@
 import gurobipy as gp
 from gurobipy import GRB
-
+import matplotlib.pyplot as plt
+from plotter import *
 
 
 class Expando:
@@ -22,7 +23,8 @@ class InputData:
                  efficiencies: dict[float],
                  co2_per_kWh: dict[float],
                  min_prod_ratio: dict[float],
-                 starting_storage_levels: dict[float]):
+                 starting_storage_levels: dict[float],
+                 starting_eua_balance: float):
         
         self.variables = variables
         self.gas_prices = gas_prices
@@ -37,6 +39,7 @@ class InputData:
         self.co2_per_kWh = co2_per_kWh
         self.min_prod_ratio = min_prod_ratio
         self.starting_storage_levels = starting_storage_levels
+        self.starting_eua_balance = starting_eua_balance
         
 
 class DeterministicModel():
@@ -109,10 +112,37 @@ class DeterministicModel():
             self.variables['Q_COAL_STORAGE'][self.n_days - 1], GRB.EQUAL, self.data.starting_storage_levels['Q_COAL_STORAGE']
         )
         
-        # CO2 Emission
+       # CO2 Emission per scenario
         self.CO2_emission = self.model.addLConstr(
-            gp.quicksum(self.variables['P_GAS'][t] * self.data.co2_per_kWh['CO2_per_kWh_GAS'] + self.variables['P_COAL'][t] * self.data.co2_per_kWh['CO2_per_kWh_COAL'] for t in self.days), GRB.EQUAL, gp.quicksum(self.variables['Q_EUA'][t] for t in self.days)
+            gp.quicksum(
+                self.variables['P_GAS'][t] * self.data.co2_per_kWh['CO2_per_kWh_GAS']
+                + self.variables['P_COAL'][t] * self.data.co2_per_kWh['CO2_per_kWh_COAL']
+                for t in self.days
+            ),
+            GRB.EQUAL,
+            self.variables['Q_EUA_BALANCE'][self.n_days - 1]
         )
+        
+        self.EUA_balance = [self.model.addLConstr(
+            self.variables['Q_EUA_BALANCE'][t-1] + self.variables['Q_EUA_BUY'][t] - self.variables['Q_EUA_SELL'][t],
+            GRB.EQUAL,
+            self.variables['Q_EUA_BALANCE'][t]
+        ) for t in range(1, self.n_days)]
+        
+        self.EUA_balance_init = self.model.addLConstr(
+            self.variables['Q_EUA_BALANCE'][0],
+            GRB.EQUAL,
+            self.data.starting_eua_balance
+        )
+        
+        self.EUA_max_sell = [self.model.addLConstr(
+            self.variables['Q_EUA_SELL'][t], GRB.LESS_EQUAL, 1_000_000
+        ) for t in self.days]
+        
+        self.EUA_max_buy = [self.model.addLConstr(
+            self.variables['Q_EUA_BUY'][t], GRB.LESS_EQUAL, 1_000_000
+        ) for t in self.days]
+        
         
         # Maximum production constraints
         self.max_prod_COAL_cap = [ self.model.addLConstr(
@@ -186,7 +216,7 @@ class DeterministicModel():
             gp.quicksum(
                 self.variables['Q_GAS_BUY'][t] * self.data.gas_prices[t]
                 + self.variables['Q_COAL_BUY'][t] * self.data.coal_prices[t]
-                + self.variables['Q_EUA'][t] * self.data.eua_prices[t]
+                + (self.variables['Q_EUA_BUY'][t]- self.variables['Q_EUA_SELL'][t]) * self.data.eua_prices[t]
                 for t in self.days
             ),
             GRB.MINIMIZE
@@ -232,86 +262,94 @@ class DeterministicModel():
 
 
     def plot_results(self):
-        import matplotlib.pyplot as plt
+        
+        plotting_days = self.days 
+        
+        # color palette
+        colors, background_color = color_palette() 
+    
+        fig, ax = plt.subplots(figsize=(12, 8))
+        
+        ax.step(
+            plotting_days,
+            [self.results.var_vals[('P_GAS', t)] for t in plotting_days],
+            label='P_GAS',
+            where='mid', color=colors[0]
+        )
 
-        plt.figure(figsize=(12, 8))
-        
-        plt.plot(
-            self.days,
-            [self.results.var_vals[('P_GAS', t)] for t in self.days],
-            label='P_GAS'
+        ax.step(
+            plotting_days,
+            [self.results.var_vals[('P_COAL', t)] for t in plotting_days],
+            label='P_COAL',
+            where='mid', color=colors[2]
         )
         
-        plt.plot(
-            self.days,
-            [self.results.var_vals[('P_COAL', t)] for t in self.days],
-            label='P_COAL'
+        ax.step(
+            plotting_days,
+            [self.results.var_vals[('P_WIND', t)] for t in plotting_days],
+            label='P_WIND',
+            where='mid', color=colors[4]
         )
         
-        plt.plot(
-            self.days,
-            [self.results.var_vals[('P_WIND', t)] for t in self.days],
-            label='P_WIND'
+        ax.step(
+            plotting_days,
+            [self.results.var_vals[('P_PV', t)] for t in plotting_days],
+            label='P_PV',
+            where='mid', color = colors[6]
         )
         
-        plt.plot(
-            self.days,
-            [self.results.var_vals[('P_PV', t)] for t in self.days],
-            label='P_PV'
-        )
-        
-        plt.xlabel('Day')
-        plt.ylabel('Power Production (kWh)')
-        plt.title('Optimal Power Production Over Time')
-        plt.legend()
-        plt.grid()
+        ax.set_xlabel('Day')
+        ax.text(0.0, 1.07, 'Optimal Power Production Over Time', transform=ax.transAxes, fontsize=14, color='black', ha ='left', fontweight='bold')
+        ax.text(0.0, 1.03, 'kWh production for each power generating unit for days 225 to 274', transform=ax.transAxes, fontsize=10, color='black', ha ='left')
+        ax.set_facecolor(background_color)
+        ax.spines['top'].set_visible(False)
+        ax.spines['right'].set_visible(False)
+        plt.tight_layout()
+        ax.legend()
+        ax.grid()
         plt.show()
         
-        plt.figure(figsize=(12, 8))
-        plt.bar(
-            self.days,
-            [self.results.var_vals[('Q_GAS_STORAGE', t)] for t in self.days],
-            label='Q_GAS_STORAGE'
-        )
-        plt.bar(
-            self.days,
-            [self.results.var_vals[('Q_COAL_STORAGE', t)] for t in self.days],
-            label='Q_COAL_STORAGE'
-        )
-        plt.xlabel('Day')
-        plt.ylabel('Storage Level (kWh)')
-        plt.title('Optimal Storage Levels Over Time')
-        plt.legend()
-        plt.grid()
+        # Plots of storage levels
+        fig, ax = plt.subplots(figsize=(10, 6))
+        ax.step(plotting_days,[self.results.var_vals[('Q_GAS_STORAGE', t)] for t in plotting_days], label='Gas Storage Level', where='mid', color=colors[1])
+        ax.step(plotting_days,[self.results.var_vals[('Q_COAL_STORAGE', t)] for t in plotting_days], label='Coal Storage Level', where='mid', color=colors[3])
+        ax.set_xlabel('Day')
+        ax.text(0.0, 1.07, 'Optimal Fuel Storage Levels Over Time', transform=ax.transAxes, fontsize=14, color='black', ha ='left', fontweight='bold')
+        ax.text(0.0, 1.03, 'kWh fuel storage levels for gas and coal storage for days 225 to 274', transform=ax.transAxes, fontsize=10, color='black', ha ='left')
+        ax.set_facecolor(background_color)
+        ax.spines['top'].set_visible(False)
+        ax.spines['right'].set_visible(False)
+        plt.tight_layout()
+        ax.legend()
+        ax.grid()
         plt.show()
         
-        plt.figure(figsize=(12, 8))
-        plt.plot(
-            self.days,
-            [self.results.var_vals[('Q_GAS_BUY', t)] for t in self.days],
-            label='Q_GAS_BUY'
-        )
-        plt.plot(
-            self.days,
-            [self.results.var_vals[('Q_COAL_BUY', t)] for t in self.days],
-            label='Q_COAL_BUY'
-        )
-        plt.xlabel('Day')
-        plt.ylabel('Fuel Purchased (kWh)')
-        plt.title('Optimal Fuel Purchases Over Time')
-        plt.legend()
-        plt.grid()
-        plt.show()
+        # Plot of purchase quantities
+        fig, ax = plt.subplots(figsize=(10, 6))
+        ax.step(plotting_days,[self.results.var_vals[('Q_GAS_BUY', t)] for t in plotting_days], label='Gas Purchase Quantity', where='mid', color=colors[2])
+        ax.step(plotting_days,[self.results.var_vals[('Q_COAL_BUY', t)] for t in plotting_days], label='Coal Purchase Quantity', where='mid', color=colors[4])
+        ax.set_xlabel('Day')
+        ax.text(0.0, 1.07, 'Optimal Fuel Purchase Quantities Over Time', transform=ax.transAxes, fontsize=14, color='black', ha ='left', fontweight='bold')
+        ax.text(0.0, 1.03, 'kWh fuel purchase quantities for gas and coal for days 225 to 274', transform=ax.transAxes, fontsize=10, color='black', ha ='left')
+        ax.set_facecolor(background_color)
+        ax.spines['top'].set_visible(False)
+        ax.spines['right'].set_visible(False)
+        plt.tight_layout()
+        ax.legend()
+        ax.grid()
+        plt.show() 
         
-        plt.figure(figsize=(12, 8))
-        plt.bar(
-            self.days,
-            [self.results.var_vals[('Q_EUA', t)] for t in self.days],
-            label='Q_EUA'
-        )
-        plt.xlabel('Day')
-        plt.ylabel('EUA Purchased (kgCO2eq)')
-        plt.title('Optimal EUA Purchases Over Time')
-        plt.legend()
-        plt.grid()
+        # Plot buy and sell of EUAs for selected days
+        fig, ax = plt.subplots(figsize=(10, 6))
+        ax.step(plotting_days,[self.results.var_vals[('Q_EUA_BUY', t)] for t in plotting_days], label='EUA Purchase Quantity', where='mid', color=colors[0])
+        ax.step(plotting_days,[self.results.var_vals[('Q_EUA_SELL', t)] for t in plotting_days], label='EUA Sell Quantity', where='mid', color=colors[3])
+        ax.set_xlabel('Day')
+        ax.text(0.0, 1.07, 'Optimal EUA Purchase and Sell Quantities Over Time', transform=ax.transAxes, fontsize=14, color='black', ha ='left', fontweight='bold')
+        ax.text(0.0, 1.03, 'kWh EUA purchase and sell quantities for days 225 to 274', transform=ax.transAxes, fontsize=10, color='black', ha ='left')
+        ax.set_facecolor(background_color)
+        ax.spines['top'].set_visible(False)
+        ax.spines['right'].set_visible(False)
+        plt.tight_layout()
+        ax.legend()
+        ax.grid()
         plt.show()

@@ -21,7 +21,7 @@ df_stor = params.storage_data_preparation()
 
 
 
-variables = df_app['DER_id'].tolist() + df_stor['storage_id'].tolist() + ['Q_COAL_BUY', 'Q_GAS_BUY', 'Q_EUA']
+variables = df_app['DER_id'].tolist() + df_stor['storage_id'].tolist() + ['Q_COAL_BUY', 'Q_GAS_BUY', 'Q_EUA_BUY', 'Q_EUA_SELL', 'Q_EUA_BALANCE']
 coal_prices = df_t['Coal_Price[EUR/KWh]'].tolist()
 gas_prices = df_t['Gas_Price[EUR/KWh]'].tolist()
 eua_prices = df_t['ETS_Price[EUR/kgCO2eq]'].tolist()
@@ -58,6 +58,7 @@ starting_storage_levels = {
     'Q_COAL_STORAGE': df_stor.loc[df_stor['storage_id'] == 'Q_COAL_STORAGE', 'starting_level_kWh_fuel'].values[0],
     'Q_GAS_STORAGE': df_stor.loc[df_stor['storage_id'] == 'Q_GAS_STORAGE', 'starting_level_kWh_fuel'].values[0]
 }
+starting_eua_balance = 0  # in kgCO2eq
 
 input_data = InputData(
     variables,
@@ -72,7 +73,8 @@ input_data = InputData(
     efficiencies,
     co2_per_kWh,
     min_prod_ratio,
-    starting_storage_levels
+    starting_storage_levels,
+    starting_eua_balance
 )
 
 model = DeterministicModel(input_data)
