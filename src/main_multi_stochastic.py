@@ -2,7 +2,7 @@ import pandas as pd
 from datetime import datetime
 import matplotlib.pyplot as plt
 from data_preparation import DataPreparationCSV, DataPreparationJSON 
-from stochastic_opt_model import StochasticModel, InputData
+from multi_stage_stochastic_opt_model import StochasticModel_First_Stage, StochasticModel_Second_Stage, InputData
 import random
 import numpy as np
 from plotter import plot_histogram, plot_time_series
@@ -84,40 +84,33 @@ input_data = InputData(
     starting_eua_balance
 )
 
-# Plot renewables time series
-# time = pd.date_range(start=datetime(2024,1,1), end=datetime(2024,12,31), freq='D')
-# series_dict = {
-#     "Wind Production": rhs_prod_wind,
-#     "PV Production": rhs_prod_pv
-# }
+no_stages = 4
+stages = list(range(2, no_stages + 1))
 
-# plot_time_series(time, series_dict, title="Renewable Energy Production Over Time", xlabel="Date", ylabel="Production [KWh]")
+n_scenarios = 1200
 
-# Plot fuel prices time series
-# series_dict_prices = {
-#     "Coal Price": coal_prices,
-#     "Gas Price": gas_prices
-# }
+first_stage_model= StochasticModel_First_Stage(input_data, n_scenario=n_scenarios)
+first_stage_model.run()
 
-# plot_time_series(time, series_dict_prices, title="Fuel Prices Over Time", xlabel="Date", ylabel="Prices in [EUR/kWh]")
+first_stage_model._save_results()
+first_stage_results = dict(first_stage_model.results.var_vals)
 
-# plot EUA prices time series
-# series_dict_eua = {
-#     "EUA Price": eua_prices
-# }
+for stage in stages:
+    
+    stagg_2_model = StochasticModel_Second_Stage(input_data, n_scenario=n_scenarios, stage=stage, no_stages=no_stages,
+                                 first_stage_results=first_stage_results)
+    stagg_2_model.run()
+    stagg_2_model._save_results()
+    first_stage_results = dict(stagg_2_model.results.var_vals) # Saving NEW first stage results for next stage
 
-# plot_time_series(time, series_dict_eua, title="EUA Prices Over Time", xlabel="Date", ylabel="Prices in [EUR/kgCO2eq]")
 
-# Initialize and run the stochastic model
-model = StochasticModel(input_data, n_scenario=1500)
-model.run()
-model.display_results()
-model._save_results()
-model.plot_results()
+stagg_2_model.display_results()
+stagg_2_model._save_results()
+stagg_2_model.plot_results()
 
 
 # Save objective values to list and create box plot
-obj_vals_list = list(model.results.obj_vals.values())
+obj_vals_list = list(stagg_2_model.results.obj_vals.values())
 plot_histogram(
     obj_vals_list,
     xlabel="Objective Value [EUR]",
@@ -127,16 +120,15 @@ plot_histogram(
 )
 
 # Perform ex post analysis
-model.ex_post_analysis()
+stagg_2_model.ex_post_analysis()
 # Plot histogram of ex-post objective values
 plot_histogram(
-    model.results.ex_post_obj_vals,
+    stagg_2_model.results.ex_post_obj_vals,
     xlabel="Ex Post Objective Value [EUR]",
     ylabel="Frequency of results across out-of-sample scenarios",
     title="Distribution of Ex Post Objective Values Across Out-of-Sample Scenarios",
     bins=50
 )
-
 
 
 # TODO: Implement multi-stage stochastic problem

@@ -17,12 +17,31 @@ def first_stage_optimization(input_data: InputData, n_scenarios: int):
     model.run()
     
     return model
+
+def second_stage_optimization(n_scenarios: int, stages: int, first_stage_mode)
+    
+    
+
+def multi_stage_optimization(n_scenarios: int, input_data: InputData, stages: int):
+    
+    first_stage_optimization(input_data: InputData, days: int):
+    realized_result()
+    
+    for stage in range(stages):
+        second_stage_optimization(first_stage_optimization, realized_result, stage)
+        
+
+
+
+    
+    
+
     
 def realized_result():
-    model = first_stage_optimization(input_data, n_scenarios=100)
+    #model = first_stage_optimization(input_data, n_scenarios=100)
     
     # Construct realized data for the first half-year (days 0-181)
-    realized_first_half = {
+    realized_first_stage = {
         'gas_prices': input_data.gas_prices[:182],
         'coal_prices': input_data.coal_prices[:182],
         'eua_prices': input_data.eua_prices[:182],
@@ -171,4 +190,28 @@ if __name__ == "__main__":
 
     #total_demand, coal_storage_end, gas_storage_end, eua_balance_end, implemented_decisions = realized_result()
     model, implemented_decisions = second_stage_optimization(n_scenarios=50, input_data=input_data, days=366-182)
+    model._save_results()
+    model.display_results()
     model.plot_results()
+    
+    # Save objective values to list and create box plot
+    obj_vals_list = list(model.results.obj_vals.values())
+    plot_histogram(
+        obj_vals_list,
+        xlabel="Objective Value [EUR]",
+        ylabel="Frequency of results across in-sample scenarios",
+        title="Distribution of Objective Values Across Scenarios",
+        bins=50
+    )
+
+    # Perform ex post analysis
+    model.ex_post_analysis()
+    # Plot histogram of ex-post objective values
+    plot_histogram(
+        model.results.ex_post_obj_vals,
+        xlabel="Ex Post Objective Value [EUR]",
+        ylabel="Frequency of results across out-of-sample scenarios",
+        title="Distribution of Ex Post Objective Values Across Out-of-Sample Scenarios",
+        bins=50
+    )
+    

@@ -2,7 +2,7 @@ import pandas as pd
 from datetime import datetime
 import matplotlib.pyplot as plt
 from data_preparation import DataPreparationCSV, DataPreparationJSON 
-from multistage_stochastic_opt_model import StochasticModel, InputData
+from graveyard.multistage_stochastic_opt_model import StochasticModel, InputData
 import random
 random.seed(42)
 

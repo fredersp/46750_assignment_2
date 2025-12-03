@@ -484,4 +484,43 @@ class StochasticModel():
         print(average_ex_post_cost)
         self.results.ex_post_obj_vals = ex_post_costs
         
+        # Check wether constraints are satisfied in out-of-sample scenarios
+        
+        
+        
+        infeasible = [0]*len(out_of_sample_scenarios)
+        infeasible_wind = 0
+        infeasible_pv = 0
+        
+        
+        for i, scen in enumerate(out_of_sample_scenarios):
+            total_production = sum(
+                self.results.var_vals[('P_COAL', t)] + self.results.var_vals[('P_GAS', t)]
+                + scen.rhs_wind_prod[t] + scen.rhs_pv_prod[t]
+                for t in self.days
+            )
+            if total_production < scen.rhs_demand:
+                infeasible[i] = 1
+            for t in self.days:
+                if self.results.var_vals[('P_WIND', t)] > scen.rhs_wind_prod[t]:
+                    infeasible_wind = 1
+                if self.results.var_vals[('P_PV', t)] > scen.rhs_pv_prod[t]:
+                    infeasible_pv = 1
+            if infeasible_pv == 1 or infeasible_wind == 1:
+                if infeasible[i] == 1:
+                    pass
+                else:
+                    infeasible[i] = 1
+            infeasible_pv = 0
+            infeasible_wind = 0
+                
+            
+            
+        
+        print(f"Number of infeasible out-of-sample scenarios: {sum(infeasible)} out of {len(out_of_sample_scenarios)}")
+        
+                
+            
+            
+        
         
