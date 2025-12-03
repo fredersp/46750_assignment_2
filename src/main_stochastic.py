@@ -5,7 +5,7 @@ from data_preparation import DataPreparationCSV, DataPreparationJSON
 from stochastic_opt_model import StochasticModel, InputData
 import random
 import numpy as np
-from plotter import plot_histogram
+from plotter import plot_histogram, plot_time_series
 random.seed(42)
 
 
@@ -26,7 +26,7 @@ df_stor = params.storage_data_preparation()
 
 
 
-variables = df_app['DER_id'].tolist() + df_stor['storage_id'].tolist() + ['Q_COAL_BUY', 'Q_GAS_BUY', 'Q_EUA_BUY']
+variables = df_app['DER_id'].tolist() + df_stor['storage_id'].tolist() + ['Q_COAL_BUY', 'Q_GAS_BUY', 'Q_EUA_BUY', 'Q_EUA_SELL', 'Q_EUA_BALANCE']
 coal_prices = df_t['Coal_Price[EUR/KWh]'].tolist()
 gas_prices = df_t['Gas_Price[EUR/KWh]'].tolist()
 eua_prices = df_t['ETS_Price[EUR/kgCO2eq]'].tolist()
@@ -65,6 +65,8 @@ starting_storage_levels = {
     'Q_GAS_STORAGE': df_stor.loc[df_stor['storage_id'] == 'Q_GAS_STORAGE', 'starting_level_kWh_fuel'].values[0]
 }
 
+starting_eua_balance = 0.0  # Assuming starting EUA balance is zero
+
 input_data = InputData(
     variables,
     gas_prices,
@@ -78,13 +80,36 @@ input_data = InputData(
     efficiencies,
     co2_per_kWh,
     min_prod_ratio,
-    starting_storage_levels
+    starting_storage_levels,
+    starting_eua_balance
 )
 
+# Plot renewables time series
+# time = pd.date_range(start=datetime(2024,1,1), end=datetime(2024,12,31), freq='D')
+# series_dict = {
+#     "Wind Production": rhs_prod_wind,
+#     "PV Production": rhs_prod_pv
+# }
 
+# plot_time_series(time, series_dict, title="Renewable Energy Production Over Time", xlabel="Date", ylabel="Production [KWh]")
 
+# Plot fuel prices time series
+# series_dict_prices = {
+#     "Coal Price": coal_prices,
+#     "Gas Price": gas_prices
+# }
 
-model = StochasticModel(input_data, n_scenario=100)
+# plot_time_series(time, series_dict_prices, title="Fuel Prices Over Time", xlabel="Date", ylabel="Prices in [EUR/kWh]")
+
+# plot EUA prices time series
+# series_dict_eua = {
+#     "EUA Price": eua_prices
+# }
+
+# plot_time_series(time, series_dict_eua, title="EUA Prices Over Time", xlabel="Date", ylabel="Prices in [EUR/kgCO2eq]")
+
+# Initialize and run the stochastic model
+model = StochasticModel(input_data, n_scenario=3000)
 model.run()
 model.display_results()
 model._save_results()
@@ -96,7 +121,7 @@ obj_vals_list = list(model.results.obj_vals.values())
 plot_histogram(
     obj_vals_list,
     xlabel="Objective Value [EUR]",
-    ylabel="Frequency",
+    ylabel="Frequency of results across in-sample scenarios",
     title="Distribution of Objective Values Across Scenarios",
     bins=50
 )
@@ -107,7 +132,7 @@ model.ex_post_analysis()
 plot_histogram(
     model.results.ex_post_obj_vals,
     xlabel="Ex Post Objective Value [EUR]",
-    ylabel="Frequency",
+    ylabel="Frequency of results across out-of-sample scenarios",
     title="Distribution of Ex Post Objective Values Across Out-of-Sample Scenarios",
     bins=50
 )
@@ -117,3 +142,4 @@ plot_histogram(
 # TODO: Implement multi-stage stochastic problem
 # TODO: Introduce Non-Anticipativity constraints
 # TODO: Introduce selling EUA allowances
+# TODO: Plot scenarios and there range

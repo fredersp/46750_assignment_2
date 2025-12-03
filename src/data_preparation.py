@@ -83,6 +83,9 @@ class DataPreparationCSV:
         
         # Create a Pandas Series for ETS prices
         ets = pd.Series(ets_prices.values, index=dates, name="ETS_Price")
+        
+        # convert to from tonne to EUR/kgCO2eq
+        ets = ets * 0.001
     
         return ets
     

@@ -26,7 +26,10 @@ class InputData:
                  efficiencies: dict[float],
                  co2_per_kWh: dict[float],
                  min_prod_ratio: dict[float],
-                 starting_storage_levels: dict[float]):
+                 starting_storage_levels: dict[float],
+                 starting_eua_balance: float):
+
+                
         
         self.variables = variables
         self.gas_prices = gas_prices
@@ -41,6 +44,7 @@ class InputData:
         self.co2_per_kWh = co2_per_kWh
         self.min_prod_ratio = min_prod_ratio
         self.starting_storage_levels = starting_storage_levels
+        self.starting_eua_balance = starting_eua_balance
 
     
 
@@ -60,22 +64,33 @@ class StochasticModel():
         self.beta = beta
         self.name = name
         self.results = Expando()
-        self.scenarios = self.generate_scenarios(n_scenario)
+        self.scenarios = self.generate_scenarios(n_scenario, sampling_method='normal')
         self._build_model()
         
         
-    def generate_scenarios(self, n_scenarios: int):
+    def generate_scenarios(self, n_scenarios: int, sampling_method: str = 'normal'):
         scenarios = []
+        
+        def uniform_sample(lower=0.8, upper=1.2):
+            return random.uniform(lower, upper)
 
-        def sample_factor(mu=0.0, sigma=0.1, lower=0.8, upper=1.2):
+        def normal_sample(mu=0.0, sigma=0.1, lower=0.8, upper=1.2):
 
             return max(lower, min(upper, 1 + random.gauss(mu, sigma)))
 
         for s in range(n_scenarios):
             # Use one shared daily shock to keep prices/renewables correlated across drivers
-            daily_shocks = [sample_factor() for _ in self.days]
+            if sampling_method == 'normal':
+                daily_shocks = [normal_sample() for _ in self.days]
+            elif sampling_method == 'uniform':
+                daily_shocks = [uniform_sample() for _ in self.days]
+            else:
+                raise ValueError(f"Unsupported sampling method: {sampling_method}")
 
-            # Create a deep copy of the input data to modify
+            # Cap renewables at daily capacity, e.g., 100,000 kW
+            capped_wind = [min(prod * daily_shocks[t], 24 * 150_000) for t, prod in enumerate(self.data.rhs_wind_prod)]
+            capped_pv = [min(prod * daily_shocks[t], 24 * 100_000) for t, prod in enumerate(self.data.rhs_pv_prod)]
+            
             scenario_data = InputData(
                 variables=self.data.variables,
                 gas_prices=[price * daily_shocks[t] for t, price in enumerate(self.data.gas_prices)],
@@ -84,18 +99,19 @@ class StochasticModel():
                 rhs_demand=self.data.rhs_demand,
                 rhs_storage=self.data.rhs_storage,
                 rhs_prod=self.data.rhs_prod,
-                rhs_prod_wind=[prod * daily_shocks[t] for t, prod in enumerate(self.data.rhs_wind_prod)],
-                rhs_prod_pv=[prod * daily_shocks[t] for t, prod in enumerate(self.data.rhs_pv_prod)],
+                rhs_prod_wind=capped_wind,
+                rhs_prod_pv=capped_pv,
                 efficiencies=self.data.efficiencies,
                 co2_per_kWh=self.data.co2_per_kWh,
                 min_prod_ratio=self.data.min_prod_ratio,
-                starting_storage_levels=self.data.starting_storage_levels
+                starting_storage_levels=self.data.starting_storage_levels,
+                starting_eua_balance=self.data.starting_eua_balance
             )
             scenarios.append(scenario_data)
         # Split into in sample and out of sample scenarios
         split_index = int(0.8 * n_scenarios)
-        self.out_of_sample_scenarios = scenarios[split_index:]
-        self.in_sample_scenarios = scenarios[:split_index]
+        self.out_of_sample_scenarios = scenarios[:split_index]
+        self.in_sample_scenarios = scenarios[split_index:]
         
         return self.in_sample_scenarios, self.out_of_sample_scenarios
 
@@ -137,6 +153,7 @@ class StochasticModel():
         self.storage_coal__max = [self.model.addLConstr(
             self.variables['Q_COAL_STORAGE'][t], GRB.LESS_EQUAL, scen.rhs_storage['Q_COAL_STORAGE']
         ) for t in self.days for scen in self.in_sample_scenarios]  
+        
         # Storage balance per scenario
         self.storage_gas = [self.model.addLConstr(
             self.variables['Q_GAS_BUY'][t] + self.variables['Q_GAS_STORAGE'][t-1]
@@ -175,6 +192,7 @@ class StochasticModel():
         self.final_storage_coal = [self.model.addLConstr(
             self.variables['Q_COAL_STORAGE'][self.n_days - 1], GRB.EQUAL, scen.starting_storage_levels['Q_COAL_STORAGE']
         ) for scen in self.in_sample_scenarios]
+        
         # CO2 Emission per scenario
         self.CO2_emission = [self.model.addLConstr(
             gp.quicksum(
@@ -183,10 +201,29 @@ class StochasticModel():
                 for t in self.days
             ),
             GRB.EQUAL,
-            gp.quicksum(self.variables['Q_EUA_BUY'][t] for t in self.days)
+            self.variables['Q_EUA_BALANCE'][self.n_days - 1]
         ) for scen in self.in_sample_scenarios]
         
-
+        self.EUA_balance = [self.model.addLConstr(
+            self.variables['Q_EUA_BALANCE'][t-1] + self.variables['Q_EUA_BUY'][t] - self.variables['Q_EUA_SELL'][t],
+            GRB.EQUAL,
+            self.variables['Q_EUA_BALANCE'][t]
+        ) for t in range(1, self.n_days) for scen in self.in_sample_scenarios]
+        
+        self.EUA_balance_init = [self.model.addLConstr(
+            self.variables['Q_EUA_BALANCE'][0],
+            GRB.EQUAL,
+            self.data.starting_eua_balance
+        ) for scen in self.in_sample_scenarios]
+        
+        self.EUA_max_sell = [self.model.addLConstr(
+            self.variables['Q_EUA_SELL'][t], GRB.LESS_EQUAL, 1_000_000
+        ) for t in self.days for scen in self.in_sample_scenarios]
+        
+        self.EUA_max_buy = [self.model.addLConstr(
+            self.variables['Q_EUA_BUY'][t], GRB.LESS_EQUAL, 1_000_000
+        ) for t in self.days for scen in self.in_sample_scenarios]
+        
         # Maximum production capacity per scenario
         self.max_prod_COAL_cap = [self.model.addLConstr(
             self.variables['P_COAL'][t], GRB.LESS_EQUAL, scen.rhs_prod['P_COAL']
@@ -195,6 +232,7 @@ class StochasticModel():
         self.max_prod_GAS_cap = [self.model.addLConstr(
             self.variables['P_GAS'][t], GRB.LESS_EQUAL, scen.rhs_prod['P_GAS']
         ) for t in self.days for scen in self.in_sample_scenarios]
+        
         # Production limited by available fuel per scenario
         self.max_prod_GAS = [self.model.addLConstr(
             self.variables['P_GAS'][t], GRB.LESS_EQUAL,
@@ -242,7 +280,7 @@ class StochasticModel():
                 gp.quicksum(
                     self.variables['Q_GAS_BUY'][t] * scen.gas_prices[t]
                     + self.variables['Q_COAL_BUY'][t] * scen.coal_prices[t]
-                    + self.variables['Q_EUA_BUY'][t] * scen.eua_prices[t]
+                    + (self.variables['Q_EUA_BUY'][t] - self.variables['Q_EUA_SELL'][t]) * scen.eua_prices[t]
                     for t in self.days
                 )
                 for scen in self.in_sample_scenarios
@@ -269,7 +307,7 @@ class StochasticModel():
             scenario_weight * gp.quicksum(
                 self.variables['Q_GAS_BUY'][t] * scen.gas_prices[t]
                 + self.variables['Q_COAL_BUY'][t] * scen.coal_prices[t]
-                + self.variables['Q_EUA_BUY'][t] * scen.eua_prices[t]
+                + (self.variables['Q_EUA_BUY'][t] - self.variables['Q_EUA_SELL'][t]) * scen.eua_prices[t]
                 for t in self.days
             )
             for scen in self.in_sample_scenarios
@@ -303,11 +341,12 @@ class StochasticModel():
             i: gp.quicksum(
                 self.variables['Q_GAS_BUY'][t].x * scen.gas_prices[t]
                 + self.variables['Q_COAL_BUY'][t].x * scen.coal_prices[t]
-                + self.variables['Q_EUA_BUY'][t].x * scen.eua_prices[t]
+                + (self.variables['Q_EUA_BUY'][t].x - self.variables['Q_EUA_SELL'][t].x) * scen.eua_prices[t]
                 for t in self.days
             ).getValue()   # convert LinExpr to float
             for i, scen in enumerate(self.in_sample_scenarios)
         }
+
         self.results.var_vals = {
             (v, t): self.variables[v][t].x
             for v in self.variables
@@ -334,7 +373,7 @@ class StochasticModel():
 
     def plot_results(self):
         
-        plotting_days = range(225, 275)  # Example: days 225 to 274
+        plotting_days = self.days 
         
         # color palette
         colors, background_color = color_palette() 
@@ -359,19 +398,19 @@ class StochasticModel():
             plotting_days,
             [self.results.var_vals[('P_WIND', t)] for t in plotting_days],
             label='P_WIND',
-            where='mid', color=colors[3]
+            where='mid', color=colors[4]
         )
         
         ax.step(
             plotting_days,
             [self.results.var_vals[('P_PV', t)] for t in plotting_days],
             label='P_PV',
-            where='mid', color = colors[5]
+            where='mid', color = colors[6]
         )
         
         ax.set_xlabel('Day')
-        ax.text(0.0, 1.07, 'Optimal Power Production Over Time', transform=ax.transAxes, fontsize=14, color='black', ha ='left')
-        ax.text(0.0, 1.02, 'kWh', transform=ax.transAxes, fontsize=10, color='black', ha ='left')
+        ax.text(0.0, 1.07, 'Optimal Power Production Over Time', transform=ax.transAxes, fontsize=14, color='black', ha ='left', fontweight='bold')
+        ax.text(0.0, 1.03, 'kWh production for each power generating unit for days 225 to 274', transform=ax.transAxes, fontsize=10, color='black', ha ='left')
         ax.set_facecolor(background_color)
         ax.spines['top'].set_visible(False)
         ax.spines['right'].set_visible(False)
@@ -380,6 +419,50 @@ class StochasticModel():
         ax.grid()
         plt.show()
         
+        # Plots of storage levels
+        fig, ax = plt.subplots(figsize=(10, 6))
+        ax.step(plotting_days,[self.results.var_vals[('Q_GAS_STORAGE', t)] for t in plotting_days], label='Gas Storage Level', where='mid', color=colors[1])
+        ax.step(plotting_days,[self.results.var_vals[('Q_COAL_STORAGE', t)] for t in plotting_days], label='Coal Storage Level', where='mid', color=colors[3])
+        ax.set_xlabel('Day')
+        ax.text(0.0, 1.07, 'Optimal Fuel Storage Levels Over Time', transform=ax.transAxes, fontsize=14, color='black', ha ='left', fontweight='bold')
+        ax.text(0.0, 1.03, 'kWh fuel storage levels for gas and coal storage for days 225 to 274', transform=ax.transAxes, fontsize=10, color='black', ha ='left')
+        ax.set_facecolor(background_color)
+        ax.spines['top'].set_visible(False)
+        ax.spines['right'].set_visible(False)
+        plt.tight_layout()
+        ax.legend()
+        ax.grid()
+        plt.show()
+        
+        # Plot of purchase quantities
+        fig, ax = plt.subplots(figsize=(10, 6))
+        ax.step(plotting_days,[self.results.var_vals[('Q_GAS_BUY', t)] for t in plotting_days], label='Gas Purchase Quantity', where='mid', color=colors[2])
+        ax.step(plotting_days,[self.results.var_vals[('Q_COAL_BUY', t)] for t in plotting_days], label='Coal Purchase Quantity', where='mid', color=colors[4])
+        ax.set_xlabel('Day')
+        ax.text(0.0, 1.07, 'Optimal Fuel Purchase Quantities Over Time', transform=ax.transAxes, fontsize=14, color='black', ha ='left', fontweight='bold')
+        ax.text(0.0, 1.03, 'kWh fuel purchase quantities for gas and coal for days 225 to 274', transform=ax.transAxes, fontsize=10, color='black', ha ='left')
+        ax.set_facecolor(background_color)
+        ax.spines['top'].set_visible(False)
+        ax.spines['right'].set_visible(False)
+        plt.tight_layout()
+        ax.legend()
+        ax.grid()
+        plt.show() 
+        
+        # Plot buy and sell of EUAs for selected days
+        fig, ax = plt.subplots(figsize=(10, 6))
+        ax.step(plotting_days,[self.results.var_vals[('Q_EUA_BUY', t)] for t in plotting_days], label='EUA Purchase Quantity', where='mid', color=colors[0])
+        ax.step(plotting_days,[self.results.var_vals[('Q_EUA_SELL', t)] for t in plotting_days], label='EUA Sell Quantity', where='mid', color=colors[3])
+        ax.set_xlabel('Day')
+        ax.text(0.0, 1.07, 'Optimal EUA Purchase and Sell Quantities Over Time', transform=ax.transAxes, fontsize=14, color='black', ha ='left', fontweight='bold')
+        ax.text(0.0, 1.03, 'kWh EUA purchase and sell quantities for days 225 to 274', transform=ax.transAxes, fontsize=10, color='black', ha ='left')
+        ax.set_facecolor(background_color)
+        ax.spines['top'].set_visible(False)
+        ax.spines['right'].set_visible(False)
+        plt.tight_layout()
+        ax.legend()
+        ax.grid()
+        plt.show()
 
     def ex_post_analysis(self):
         # Get out-of-sample scenarios
