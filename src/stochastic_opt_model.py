@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 import random
 import seaborn as sns
 from plotter import *
-
+random.seed(42)
 
 
 class Expando:
@@ -53,7 +53,7 @@ class InputData:
 
 class StochasticModel():
 
-    def __init__(self, input_data: InputData, name: str = "Stochastic Optimization Model", days: int = 366, n_scenario: int = 10, risk_averse: bool = False, alpha: float = 0.95, beta: float = 0.5):
+    def __init__(self, input_data: InputData, name: str = "Stochastic Optimization Model", days: int = 366, n_scenario: int = 10, risk_averse: bool = False, alpha: float = 0.95, beta: float = 0.5, sampling_method: str = 'normal'):
         self.data = input_data
         # keep numeric day count and an iterable range for loops
         self.n_days = int(days)
@@ -63,8 +63,9 @@ class StochasticModel():
         self.alpha = alpha
         self.beta = beta
         self.name = name
+        self.sampling_method = sampling_method
         self.results = Expando()
-        self.scenarios = self.generate_scenarios(n_scenario, sampling_method='normal')
+        self.scenarios = self.generate_scenarios(n_scenario, sampling_method=sampling_method)
         self._build_model()
         
         
@@ -77,6 +78,15 @@ class StochasticModel():
         def normal_sample(mu=0.0, sigma=0.1, lower=0.8, upper=1.2):
 
             return max(lower, min(upper, 1 + random.gauss(mu, sigma)))
+        
+        def normal_sample_with_extremes(mu=0.0, sigma=0.1, lower=0.8, upper=1.2, extreme_prob=0.05, extreme_multiplier=1.5):
+            if random.random() < extreme_prob:
+                if random.random() < 0.5:
+                    return lower * extreme_multiplier
+                else:
+                    return upper * extreme_multiplier
+            else:
+                return max(lower, min(upper, 1 + random.gauss(mu, sigma)))
 
         for s in range(n_scenarios):
             # Use one shared daily shock to keep prices/renewables correlated across drivers
@@ -84,12 +94,14 @@ class StochasticModel():
                 daily_shocks = [normal_sample() for _ in self.days]
             elif sampling_method == 'uniform':
                 daily_shocks = [uniform_sample() for _ in self.days]
+            elif sampling_method == 'normal_with_extremes':
+                daily_shocks = [normal_sample_with_extremes() for _ in self.days]
             else:
                 raise ValueError(f"Unsupported sampling method: {sampling_method}")
 
             # Cap renewables at daily capacity, e.g., 100,000 kW
-            capped_wind = [min(prod * daily_shocks[t], 24 * 150_000) for t, prod in enumerate(self.data.rhs_wind_prod)]
-            capped_pv = [min(prod * daily_shocks[t], 24 * 100_000) for t, prod in enumerate(self.data.rhs_pv_prod)]
+            capped_wind = [min(prod * daily_shocks[t], 24 * 15_000) for t, prod in enumerate(self.data.rhs_wind_prod)]
+            capped_pv = [min(prod * daily_shocks[t], 24 * 50_000) for t, prod in enumerate(self.data.rhs_pv_prod)]
             
             scenario_data = InputData(
                 variables=self.data.variables,
@@ -352,7 +364,13 @@ class StochasticModel():
             for v in self.variables
             for t in self.days
         }
-
+        
+        self.results.dual_vals = {
+            
+            'demand': [constr.Pi for constr in self.demand],
+            'storage_gas_max': [constr.Pi for constr in self.storage_gas__max],
+            'storage_coal_max': [constr.Pi for constr in self.storage_coal__max],
+        }
         
        
     def run(self):
@@ -410,8 +428,9 @@ class StochasticModel():
         
         ax.set_xlabel('Day')
         ax.text(0.0, 1.07, 'Optimal Power Production Over Time', transform=ax.transAxes, fontsize=14, color='black', ha ='left', fontweight='bold')
-        ax.text(0.0, 1.03, 'kWh production for each power generating unit for days 225 to 274', transform=ax.transAxes, fontsize=10, color='black', ha ='left')
+        ax.text(0.0, 1.03, 'Power production for each power generating unit [kWh]', transform=ax.transAxes, fontsize=10, color='black', ha ='left')
         ax.set_facecolor(background_color)
+        fig.patch.set_facecolor(background_color)
         ax.spines['top'].set_visible(False)
         ax.spines['right'].set_visible(False)
         plt.tight_layout()
@@ -421,12 +440,13 @@ class StochasticModel():
         
         # Plots of storage levels
         fig, ax = plt.subplots(figsize=(10, 6))
-        ax.step(plotting_days,[self.results.var_vals[('Q_GAS_STORAGE', t)] for t in plotting_days], label='Gas Storage Level', where='mid', color=colors[1])
+        ax.step(plotting_days,[self.results.var_vals[('Q_GAS_STORAGE', t)] for t in plotting_days], label='Gas Storage Level', where='mid', color=colors[0])
         ax.step(plotting_days,[self.results.var_vals[('Q_COAL_STORAGE', t)] for t in plotting_days], label='Coal Storage Level', where='mid', color=colors[3])
         ax.set_xlabel('Day')
         ax.text(0.0, 1.07, 'Optimal Fuel Storage Levels Over Time', transform=ax.transAxes, fontsize=14, color='black', ha ='left', fontweight='bold')
-        ax.text(0.0, 1.03, 'kWh fuel storage levels for gas and coal storage for days 225 to 274', transform=ax.transAxes, fontsize=10, color='black', ha ='left')
+        ax.text(0.0, 1.03, 'Fuel storage levels for gas and coal [kWh]', transform=ax.transAxes, fontsize=10, color='black', ha ='left')
         ax.set_facecolor(background_color)
+        fig.patch.set_facecolor(background_color)
         ax.spines['top'].set_visible(False)
         ax.spines['right'].set_visible(False)
         plt.tight_layout()
@@ -436,12 +456,13 @@ class StochasticModel():
         
         # Plot of purchase quantities
         fig, ax = plt.subplots(figsize=(10, 6))
-        ax.step(plotting_days,[self.results.var_vals[('Q_GAS_BUY', t)] for t in plotting_days], label='Gas Purchase Quantity', where='mid', color=colors[2])
-        ax.step(plotting_days,[self.results.var_vals[('Q_COAL_BUY', t)] for t in plotting_days], label='Coal Purchase Quantity', where='mid', color=colors[4])
+        ax.step(plotting_days,[self.results.var_vals[('Q_GAS_BUY', t)] for t in plotting_days], label='Gas Purchase Quantity', where='mid', color=colors[0])
+        ax.step(plotting_days,[self.results.var_vals[('Q_COAL_BUY', t)] for t in plotting_days], label='Coal Purchase Quantity', where='mid', color=colors[3])
         ax.set_xlabel('Day')
         ax.text(0.0, 1.07, 'Optimal Fuel Purchase Quantities Over Time', transform=ax.transAxes, fontsize=14, color='black', ha ='left', fontweight='bold')
-        ax.text(0.0, 1.03, 'kWh fuel purchase quantities for gas and coal for days 225 to 274', transform=ax.transAxes, fontsize=10, color='black', ha ='left')
+        ax.text(0.0, 1.03, 'Fuel purchase quantities for gas and coal [kWh]', transform=ax.transAxes, fontsize=10, color='black', ha ='left')
         ax.set_facecolor(background_color)
+        fig.patch.set_facecolor(background_color)
         ax.spines['top'].set_visible(False)
         ax.spines['right'].set_visible(False)
         plt.tight_layout()
@@ -454,9 +475,10 @@ class StochasticModel():
         ax.step(plotting_days,[self.results.var_vals[('Q_EUA_BUY', t)] for t in plotting_days], label='EUA Purchase Quantity', where='mid', color=colors[0])
         ax.step(plotting_days,[self.results.var_vals[('Q_EUA_SELL', t)] for t in plotting_days], label='EUA Sell Quantity', where='mid', color=colors[3])
         ax.set_xlabel('Day')
-        ax.text(0.0, 1.07, 'Optimal EUA Purchase and Sell Quantities Over Time', transform=ax.transAxes, fontsize=14, color='black', ha ='left', fontweight='bold')
-        ax.text(0.0, 1.03, 'kWh EUA purchase and sell quantities for days 225 to 274', transform=ax.transAxes, fontsize=10, color='black', ha ='left')
+        ax.text(0.0, 1.07, 'Optimal EUA Purchase and Sell Quantities Over Time [#]', transform=ax.transAxes, fontsize=14, color='black', ha ='left', fontweight='bold')
+        ax.text(0.0, 1.03, 'Amount of EUA allowances bought and sold', transform=ax.transAxes, fontsize=10, color='black', ha ='left')
         ax.set_facecolor(background_color)
+        fig.patch.set_facecolor(background_color)
         ax.spines['top'].set_visible(False)
         ax.spines['right'].set_visible(False)
         plt.tight_layout()
@@ -518,7 +540,7 @@ class StochasticModel():
             
         
         print(f"Number of infeasible out-of-sample scenarios: {sum(infeasible)} out of {len(out_of_sample_scenarios)}")
-        
+        return sum(infeasible)
                 
             
             

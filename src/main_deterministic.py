@@ -2,6 +2,7 @@ import pandas as pd
 from datetime import datetime
 from data_preparation import DataPreparationCSV, DataPreparationJSON 
 from deterministic_opt_model import DeterministicModel, InputData
+from plotter import *
 
 
 # Load data files and prepare the dataset for timeseries
@@ -36,8 +37,8 @@ rhs_prod = {
     'P_COAL': df_app.loc[df_app['DER_id'] == 'P_COAL', 'max_power_kW'].values[0]*24,
     'P_GAS': df_app.loc[df_app['DER_id'] == 'P_GAS', 'max_power_kW'].values[0]*24
 }
-rhs_prod_wind = df_t['Wind_Prod[KWh]'].tolist()
-rhs_prod_pv = df_t['PV_Prod[KWh]'].tolist()
+rhs_prod_wind = (df_t['Wind_Prod[KWh]']).tolist()
+rhs_prod_pv = (df_t['PV_Prod[KWh]']).tolist()
 
 efficiencies = {
     'eta_COAL': df_app.loc[df_app['DER_id'] == 'P_COAL', 'efficiency'].values[0],
@@ -60,6 +61,13 @@ starting_storage_levels = {
 }
 starting_eua_balance = 0  # in kgCO2eq
 
+plot_gas_coal_prices(df_t.index, coal_prices, gas_prices)
+
+plot_eua_prices(df_t.index, eua_prices)
+
+plot_renewables(df_t.index, rhs_prod_wind, rhs_prod_pv)
+
+
 input_data = InputData(
     variables,
     gas_prices,
@@ -80,22 +88,12 @@ input_data = InputData(
 model = DeterministicModel(input_data)
 model.run()
 model.display_results()
-model.plot_results()
+# model.plot_results()
 
-# Plot gas and coal prices
-import matplotlib.pyplot as plt
-plt.figure(figsize=(12, 6))
-plt.plot(df_t['Date'], df_t['Gas_Price[EUR/KWh]'], label='Gas Price [EUR/KWh]')
-plt.plot(df_t['Date'], df_t['Coal_Price[EUR/KWh]'], label='Coal Price [EUR/KWh]')
-plt.xlabel('Date')
-plt.ylabel('Price [EUR/KWh]')
-plt.title('Gas and Coal Prices Over Time')
-plt.legend()
-plt.grid()
-plt.show()
+# tot_p_gas = sum(model.results.var_vals['P_GAS', t] for t in range(model.n_days))
+# tot_p_coal = sum(model.results.var_vals['P_COAL', t] for t in range(model.n_days))
+# tot_p_wind = sum(model.results.var_vals['P_WIND', t] for t in range(model.n_days))
+# tot_p_pv = sum(model.results.var_vals['P_PV', t] for t in range(model.n_days))
 
-# TODO: Make better plots for results
-# TODO: Change storage sizes
-# TODO: Make smaller coal and gas capacities
-# TODO: Maybe EUA max cap per day
-# TODO: Double check data and sources, make sure we have arguments for what we did
+# plot_energy_mix(tot_p_gas, tot_p_coal, tot_p_wind, tot_p_pv)
+

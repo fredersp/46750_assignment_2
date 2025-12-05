@@ -113,7 +113,7 @@ class DataPreparationCSV:
         data['time'] = pd.to_datetime(data['time'], format='%Y-%m-%d %H:%M')
         data['electricity'] = pd.to_numeric(data['electricity'], errors='coerce')
 
-        daily_wind = data.set_index('time')['electricity'].resample('D').mean()
+        daily_wind = data.set_index('time')['electricity'].resample('D').sum()
 
         # shift 2019 dates to 2024
         daily_wind.index = daily_wind.index.map(lambda dt: dt.replace(year=2024))
@@ -125,14 +125,14 @@ class DataPreparationCSV:
         if pd.Timestamp('2024-02-29') in daily_wind.index:
             daily_wind.loc['2024-02-29'] = daily_wind.loc[['2024-02-28', '2024-03-01']].mean()
 
-        return daily_wind
+        return daily_wind*0.1
 
     def prepare_pv_data(self):
         data = load_csv_data(self.pv_file_name, skiprow=3)
         data['time'] = pd.to_datetime(data['time'], format='%Y-%m-%d %H:%M')
         data['electricity'] = pd.to_numeric(data['electricity'], errors='coerce')
 
-        daily_pv = data.set_index('time')['electricity'].resample('D').mean()
+        daily_pv = data.set_index('time')['electricity'].resample('D').sum()
 
         # shift 2019 dates to 2024
         daily_pv.index = daily_pv.index.map(lambda dt: dt.replace(year=2024))
@@ -144,7 +144,7 @@ class DataPreparationCSV:
         if pd.Timestamp('2024-02-29') in daily_pv.index:
             daily_pv.loc['2024-02-29'] = daily_pv.loc[['2024-02-28', '2024-03-01']].mean()
 
-        return daily_pv        
+        return daily_pv*0.5        
         
     
     

@@ -87,7 +87,7 @@ input_data = InputData(
 no_stages = 4
 stages = list(range(2, no_stages + 1))
 
-n_scenarios = 1200
+n_scenarios = 6000
 
 first_stage_model= StochasticModel_First_Stage(input_data, n_scenario=n_scenarios)
 first_stage_model.run()
@@ -97,20 +97,20 @@ first_stage_results = dict(first_stage_model.results.var_vals)
 
 for stage in stages:
     
-    stagg_2_model = StochasticModel_Second_Stage(input_data, n_scenario=n_scenarios, stage=stage, no_stages=no_stages,
+    second_stage_model = StochasticModel_Second_Stage(input_data, n_scenario=n_scenarios, stage=stage, no_stages=no_stages,
                                  first_stage_results=first_stage_results)
-    stagg_2_model.run()
-    stagg_2_model._save_results()
-    first_stage_results = dict(stagg_2_model.results.var_vals) # Saving NEW first stage results for next stage
+    second_stage_model.run()
+    second_stage_model._save_results()
+    first_stage_results = dict(second_stage_model.results.var_vals) # Saving NEW first stage results for next stage
 
 
-stagg_2_model.display_results()
-stagg_2_model._save_results()
-stagg_2_model.plot_results()
+second_stage_model.display_results()
+second_stage_model._save_results()
+second_stage_model.plot_results()
 
 
 # Save objective values to list and create box plot
-obj_vals_list = list(stagg_2_model.results.obj_vals.values())
+obj_vals_list = list(second_stage_model.results.obj_vals.values())
 plot_histogram(
     obj_vals_list,
     xlabel="Objective Value [EUR]",
@@ -120,18 +120,12 @@ plot_histogram(
 )
 
 # Perform ex post analysis
-stagg_2_model.ex_post_analysis()
+second_stage_model.ex_post_analysis()
 # Plot histogram of ex-post objective values
 plot_histogram(
-    stagg_2_model.results.ex_post_obj_vals,
+    second_stage_model.results.ex_post_obj_vals,
     xlabel="Ex Post Objective Value [EUR]",
     ylabel="Frequency of results across out-of-sample scenarios",
     title="Distribution of Ex Post Objective Values Across Out-of-Sample Scenarios",
     bins=50
 )
-
-
-# TODO: Implement multi-stage stochastic problem
-# TODO: Introduce Non-Anticipativity constraints
-# TODO: Introduce selling EUA allowances
-# TODO: Plot scenarios and there range
