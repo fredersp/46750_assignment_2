@@ -68,6 +68,7 @@ plot_eua_prices(df_t.index, eua_prices)
 plot_renewables(df_t.index, rhs_prod_wind, rhs_prod_pv)
 
 
+
 input_data = InputData(
     variables,
     gas_prices,
@@ -88,12 +89,13 @@ input_data = InputData(
 model = DeterministicModel(input_data)
 model.run()
 model.display_results()
-# model.plot_results()
+model.plot_results()
 
-# tot_p_gas = sum(model.results.var_vals['P_GAS', t] for t in range(model.n_days))
-# tot_p_coal = sum(model.results.var_vals['P_COAL', t] for t in range(model.n_days))
-# tot_p_wind = sum(model.results.var_vals['P_WIND', t] for t in range(model.n_days))
-# tot_p_pv = sum(model.results.var_vals['P_PV', t] for t in range(model.n_days))
+tot_p_gas = sum(model.results.var_vals['P_GAS', t] for t in range(model.n_days))
+tot_p_coal = sum(model.results.var_vals['P_COAL', t] for t in range(model.n_days))
+tot_p_wind = sum(model.results.var_vals['P_WIND', t] for t in range(model.n_days))
+tot_p_pv = sum(model.results.var_vals['P_PV', t] for t in range(model.n_days))
 
-# plot_energy_mix(tot_p_gas, tot_p_coal, tot_p_wind, tot_p_pv)
+plot_energy_mix(tot_p_gas, tot_p_coal, tot_p_wind, tot_p_pv)
+
 
