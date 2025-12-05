@@ -16,8 +16,14 @@ def color_palette():
     "#FBBF6B",  # Golden Orange
     "#F5C07A",  # Muted Gold
     "#F2D8A0",  # Light Warm Sand
+    #add 3 green colars in the same tone
+    "#2A9D8F",  # Teal
+    "#66C2A4",  # Light Teal    
+    "#A0E7D6",  # Very Light Teal
 ]
     return economist_warm, background_color
+
+
 
 def plot_histogram(data, xlabel, ylabel, title, bins=30):
     economist_warm, background_color = color_palette()
