@@ -5,7 +5,7 @@ from data_preparation import DataPreparationCSV, DataPreparationJSON
 from multi_stage_stochastic_opt_model import StochasticModel_First_Stage, StochasticModel_Second_Stage, InputData
 import random
 import numpy as np
-from plotter import plot_histogram, plot_time_series
+from plotter import *
 random.seed(42)
 
 
@@ -87,7 +87,7 @@ input_data = InputData(
 no_stages = 4
 stages = list(range(2, no_stages + 1))
 
-n_scenarios = 6000
+n_scenarios = 100
 
 first_stage_model= StochasticModel_First_Stage(input_data, n_scenario=n_scenarios)
 first_stage_model.run()

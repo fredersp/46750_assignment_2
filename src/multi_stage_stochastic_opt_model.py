@@ -49,7 +49,7 @@ class InputData:
  
  
 class StochasticModel_Second_Stage():
-    def __init__(self, input_data: InputData, name: str = "Stochastic Optimization Model", days: int = 366, n_scenario: int = 10, risk_averse: bool = False, alpha: float = 0.95, beta: float = 0.5, stage: int = 2, no_stages: int = 4, first_stage_results: dict = None):
+    def __init__(self, input_data: InputData, name: str = "Stochastic Optimization Model", days: int = 366, n_scenario: int = 10, risk_averse: bool = False, alpha: float = 0.95, beta: float = 0.5, stage: int = 2, no_stages: int = 4, first_stage_results: dict = None, sampling_method: str = 'normal_with_extremes'):
         self.data = input_data
         self.first_stage = first_stage_results
         # keep numeric day count and an iterable range for loops
@@ -59,15 +59,16 @@ class StochasticModel_Second_Stage():
         self.split = int(days*((stage-1)/no_stages))
         self.days = range(self.n_days)
         self.n_scenario = range(n_scenario)
+        self.sampling_method = sampling_method
         self.risk_averse = risk_averse
         self.alpha = alpha
         self.beta = beta
         self.name = name
         self.results = Expando()
-        self.scenarios = self.generate_scenarios(n_scenario, sampling_method='normal')
+        self.scenarios = self.generate_scenarios(n_scenario, sampling_method= sampling_method)
         self._build_model()
     
-    def generate_scenarios(self, n_scenarios: int, sampling_method: str = 'normal'):
+    def generate_scenarios(self, n_scenarios: int, sampling_method = 'normal_with_extremes'):
         scenarios = []
         
         def uniform_sample(lower=0.8, upper=1.2):
@@ -76,6 +77,15 @@ class StochasticModel_Second_Stage():
         def normal_sample(mu=0.0, sigma=0.1, lower=0.8, upper=1.2):
 
             return max(lower, min(upper, 1 + random.gauss(mu, sigma)))
+        
+        def normal_sample_with_extremes(mu=0.0, sigma=0.1, lower=0.8, upper=1.2, extreme_prob=0.05, extreme_multiplier=1.5):
+            if random.random() < extreme_prob:
+                if random.random() < 0.5:
+                    return lower * extreme_multiplier
+                else:
+                    return upper * extreme_multiplier
+            else:
+                return max(lower, min(upper, 1 + random.gauss(mu, sigma)))
 
         for s in range(n_scenarios):
             # Use one shared daily shock to keep prices/renewables correlated across drivers
@@ -83,12 +93,14 @@ class StochasticModel_Second_Stage():
                 daily_shocks = [normal_sample() for _ in self.days]
             elif sampling_method == 'uniform':
                 daily_shocks = [uniform_sample() for _ in self.days]
+            elif sampling_method == 'normal_with_extremes':
+                daily_shocks = [normal_sample_with_extremes() for _ in self.days]
             else:
                 raise ValueError(f"Unsupported sampling method: {sampling_method}")
 
             # Cap renewables at daily capacity, e.g., 100,000 kW
-            capped_wind = [min(prod * daily_shocks[t], 24 * 150_000) for t, prod in enumerate(self.data.rhs_wind_prod)]
-            capped_pv = [min(prod * daily_shocks[t], 24 * 100_000) for t, prod in enumerate(self.data.rhs_pv_prod)]
+            capped_wind = [min(prod * daily_shocks[t], 24 * 15_000) for t, prod in enumerate(self.data.rhs_wind_prod)]
+            capped_pv = [min(prod * daily_shocks[t], 24 * 50_000) for t, prod in enumerate(self.data.rhs_pv_prod)]
             
             
             
