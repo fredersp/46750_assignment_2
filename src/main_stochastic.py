@@ -6,6 +6,7 @@ from stochastic_opt_model import StochasticModel, InputData
 import random
 import numpy as np
 from plotter import *
+from scipy.stats import gaussian_kde
 random.seed(42)
 
 
@@ -84,34 +85,34 @@ input_data = InputData(
     starting_eua_balance
 )
 
-# Initialize and run the stochastic model
-model = StochasticModel(input_data, n_scenario=5000, sampling_method='normal_with_extremes', risk_averse=True, beta=0.95)
-model.run()
-model.display_results()
-model._save_results()
-model.plot_results()
+# # Initialize and run the stochastic model
+# model = StochasticModel(input_data, n_scenario=5000, sampling_method='normal_with_extremes', risk_averse=True, beta=0.95)
+# model.run()
+# model.display_results()
+# model._save_results()
+# model.plot_results()
 
 
-# Save objective values to list and create box plot
-obj_vals_list = list(model.results.obj_vals.values())
-plot_histogram(
-    obj_vals_list,
-    xlabel="Objective Value [EUR]",
-    ylabel="Frequency of results across in-sample scenarios",
-    title="Distribution of Objective Values Across Scenarios",
-    bins=50
-)
+# # Save objective values to list and create box plot
+# obj_vals_list = list(model.results.obj_vals.values())
+# plot_histogram(
+#     obj_vals_list,
+#     xlabel="Objective Value [EUR]",
+#     ylabel="Frequency of results across in-sample scenarios",
+#     title="Distribution of Objective Values Across Scenarios",
+#     bins=50
+# )
 
-# Perform ex post analysis
-infeasible_count = model.ex_post_analysis()
-# Plot histogram of ex-post objective values
-plot_histogram(
-    model.results.ex_post_obj_vals,
-    xlabel="Ex Post Objective Value [EUR]",
-    ylabel="Frequency of results across out-of-sample scenarios",
-    title="Distribution of Ex Post Objective Values Across Out-of-Sample Scenarios",
-    bins=50
-)
+# # Perform ex post analysis
+# infeasible_count = model.ex_post_analysis()
+# # Plot histogram of ex-post objective values
+# plot_histogram(
+#     model.results.ex_post_obj_vals,
+#     xlabel="Ex Post Objective Value [EUR]",
+#     ylabel="Frequency of results across out-of-sample scenarios",
+#     title="Distribution of Ex Post Objective Values Across Out-of-Sample Scenarios",
+#     bins=50
+# )
 
 
 # tot_p_gas = sum(model.results.var_vals['P_GAS', t] for t in range(model.n_days))
@@ -120,6 +121,10 @@ plot_histogram(
 # tot_p_pv = sum(model.results.var_vals['P_PV', t] for t in range(model.n_days))
 
 # plot_energy_mix(tot_p_gas, tot_p_coal, tot_p_wind, tot_p_pv)
+
+
+
+
 
 
 # betavalues = [0.01, 0.05, 0.1, 0.25, 0.5, 0.75, 0.9, 0.95, 0.99]
@@ -148,3 +153,67 @@ plot_histogram(
 
 # TODO: Compare Energy Mix in stocha model vs deterministic model
 # TODO: Zoom in on 260-366 days to look at the different models act how they act
+
+# Initialize and run the stochastic model
+model = StochasticModel(input_data, n_scenario=5000, sampling_method='normal_with_extremes', risk_averse=False, beta=0.95)
+model.run()
+model.display_results()
+model._save_results()
+#model.plot_results()
+
+# Initialize and run the stochastic model
+model_risk = StochasticModel(input_data, n_scenario=5000, sampling_method='normal_with_extremes', risk_averse=True, beta=0.95)
+model_risk.run()
+model_risk.display_results()
+model_risk._save_results()
+#model_risk.plot_results()
+
+
+
+# Save objective values to list and create box plot
+obj_vals_list = list(model.results.obj_vals.values())
+obj_vals_list_risk = list(model_risk.results.obj_vals.values())
+
+# Calculate VaR (95th percentile) and CVaR (mean of worst 5%)
+var_neutral = np.percentile(obj_vals_list, 95)
+var_risk = np.percentile(obj_vals_list_risk, 95)
+cvar_neutral = np.mean([x for x in obj_vals_list if x >= var_neutral])
+cvar_risk = np.mean([x for x in obj_vals_list_risk if x >= var_risk])
+
+# Calculate expected costs
+expected_cost_neutral = np.mean(obj_vals_list)
+expected_cost_risk = np.mean(obj_vals_list_risk)
+
+fig, ax = plt.subplots(figsize=(10, 6))
+# Plot KDE lines instead of histograms
+kde_neutral = gaussian_kde(obj_vals_list)
+kde_risk = gaussian_kde(obj_vals_list_risk)
+x_range = np.linspace(min(min(obj_vals_list), min(obj_vals_list_risk)), 
+                    max(max(obj_vals_list), max(obj_vals_list_risk)), 200)
+
+ax.plot(x_range, kde_neutral(x_range), linewidth=2, label='Risk-neutral', color='#B00020')
+ax.plot(x_range, kde_risk(x_range), linewidth=2, label='Risk-averse (β=0.95)', color='#5C97D9')
+
+# Shade CVaR areas
+x_cvar_neutral = x_range[x_range >= var_neutral]
+ax.fill_between(x_cvar_neutral, 0, kde_neutral(x_cvar_neutral), alpha=0.3, color='#B00020', label=f'CVaR (Risk-neutral): €{cvar_neutral:,.0f}', edgecolor='none')
+
+x_cvar_risk = x_range[x_range >= var_risk]
+ax.fill_between(x_cvar_risk, 0, kde_risk(x_cvar_risk), alpha=0.3, color='#5C97D9', label=f'CVaR (Risk-averse): €{cvar_risk:,.0f}', edgecolor='none')
+
+ax.axvline(var_neutral, color='#B00020', linestyle='--', alpha=0.7, label=f'VaR (Risk-neutral): €{var_neutral:,.0f}')
+ax.axvline(var_risk, color='#5C97D9', linestyle='--', alpha=0.7, label=f'VaR (Risk-averse): €{var_risk:,.0f}')
+
+ax.axvline(expected_cost_neutral, color='#B00020', linestyle=':', linewidth=2, alpha=0.7, label=f'Expected Cost (Risk-neutral): €{expected_cost_neutral:,.0f}')
+ax.axvline(expected_cost_risk, color='#5C97D9', linestyle=':', linewidth=2, alpha=0.7, label=f'Expected Cost (Risk-averse): €{expected_cost_risk:,.0f}')
+
+ax.set_xlabel("Total annual cost [€]", fontsize=12)
+ax.set_ylabel("Density", fontsize=12)
+ax.set_ylim(bottom=0, top=ax.get_ylim()[1]*1.2)
+ax.text(0.0, 1.07, 'Risk Analysis', transform=ax.transAxes, fontsize=18, color='black', ha='left', fontweight='bold')
+ax.text(0.0, 1.03, 'Distribution of total annual cost for stochastic model: Risk-neutral vs Risk-averse', transform=ax.transAxes, fontsize=14, color='black', ha='left')  
+ax.legend(loc='upper right', fontsize=12)
+ax.grid(True, alpha=0.3)
+ax.tick_params(axis='both', labelsize=12)
+plt.tight_layout()
+plt.show()
