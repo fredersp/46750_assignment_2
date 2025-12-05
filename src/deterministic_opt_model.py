@@ -24,7 +24,9 @@ class InputData:
                  co2_per_kWh: dict[float],
                  min_prod_ratio: dict[float],
                  starting_storage_levels: dict[float],
-                 starting_eua_balance: float):
+                 starting_eua_balance: float,
+                 storage_cost_coal: float,
+                 storage_cost_gas: float):
         
         self.variables = variables
         self.gas_prices = gas_prices
@@ -40,15 +42,18 @@ class InputData:
         self.min_prod_ratio = min_prod_ratio
         self.starting_storage_levels = starting_storage_levels
         self.starting_eua_balance = starting_eua_balance
+        self.storage_cost_coal = storage_cost_coal
+        self.storage_cost_gas = storage_cost_gas
         
 
 class DeterministicModel():
 
-    def __init__(self, input_data: InputData, name: str = "Deterministic Optimization Model", days: int = 366):
+    def __init__(self, input_data: InputData, name: str = "Deterministic Optimization Model", days: int = 366, storage_cost: bool = False):
         self.data = input_data
         # keep numeric day count and an iterable range for loops
         self.n_days = int(days)
         self.days = range(self.n_days)
+        self.storage_cost = storage_cost
         self.name = name
         self.results = Expando()
         self._build_model()
@@ -221,6 +226,20 @@ class DeterministicModel():
             ),
             GRB.MINIMIZE
         )
+        
+        if self.storage_cost == True:
+            # add storage costs to objective
+            self.model.setObjective(
+                gp.quicksum(
+                    self.variables['Q_GAS_BUY'][t] * self.data.gas_prices[t]
+                    + self.variables['Q_COAL_BUY'][t] * self.data.coal_prices[t]
+                    + (self.variables['Q_EUA_BUY'][t]- self.variables['Q_EUA_SELL'][t]) * self.data.eua_prices[t]
+                    + self.data.storage_cost_gas * self.variables['Q_GAS_STORAGE'][t]
+                    + self.data.storage_cost_coal * self.variables['Q_COAL_STORAGE'][t]
+                    for t in self.days
+                ),
+                GRB.MINIMIZE
+            )
 
 
     def _build_model(self):
@@ -236,12 +255,12 @@ class DeterministicModel():
         # save variable values as dict keyed by (var_name, t)
         self.results.var_vals = {(v, t): self.variables[v][t].x
                                  for v in self.data.variables for t in self.days}
-        # please return the dual values for all constraints
-        # self.results.dual_vals = {
-        #     'upper_power': [self.upper_power[i].Pi for i in range(len(self.upper_power))],
-        #     'hourly_balance': [self.hourly_balance[i].Pi for i in range(len(self.hourly_balance))],
-        #     'daily_balance': self.daily_balance.Pi
-        # }
+        
+        self.results.dual_vals = {
+            'Storage_GAS_Max': [self.storage_gas__max[t].Pi for t in range(len(self.storage_gas__max))],
+            'Storage_COAL_Max': [self.storage_coal__max[t].Pi for t in range(len(self.storage_coal__max))],
+        }
+        
 
     def run(self):
         self.model.optimize()
