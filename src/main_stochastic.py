@@ -84,64 +84,64 @@ input_data = InputData(
     starting_eua_balance
 )
 
-# # Initialize and run the stochastic model
-model = StochasticModel(input_data, n_scenario=5000, sampling_method='normal_with_extremes')
+# Initialize and run the stochastic model
+model = StochasticModel(input_data, n_scenario=5000, sampling_method='normal_with_extremes', risk_averse=True, beta=0.95)
 model.run()
 model.display_results()
 model._save_results()
-# model.plot_results()
+model.plot_results()
 
 
-# # Save objective values to list and create box plot
-# obj_vals_list = list(model.results.obj_vals.values())
-# plot_histogram(
-#     obj_vals_list,
-#     xlabel="Objective Value [EUR]",
-#     ylabel="Frequency of results across in-sample scenarios",
-#     title="Distribution of Objective Values Across Scenarios",
-#     bins=50
-# )
+# Save objective values to list and create box plot
+obj_vals_list = list(model.results.obj_vals.values())
+plot_histogram(
+    obj_vals_list,
+    xlabel="Objective Value [EUR]",
+    ylabel="Frequency of results across in-sample scenarios",
+    title="Distribution of Objective Values Across Scenarios",
+    bins=50
+)
 
-# # Perform ex post analysis
-# infeasible_count = model.ex_post_analysis()
-# # Plot histogram of ex-post objective values
-# plot_histogram(
-#     model.results.ex_post_obj_vals,
-#     xlabel="Ex Post Objective Value [EUR]",
-#     ylabel="Frequency of results across out-of-sample scenarios",
-#     title="Distribution of Ex Post Objective Values Across Out-of-Sample Scenarios",
-#     bins=50
-# )
-
-
-tot_p_gas = sum(model.results.var_vals['P_GAS', t] for t in range(model.n_days))
-tot_p_coal = sum(model.results.var_vals['P_COAL', t] for t in range(model.n_days))
-tot_p_wind = sum(model.results.var_vals['P_WIND', t] for t in range(model.n_days))
-tot_p_pv = sum(model.results.var_vals['P_PV', t] for t in range(model.n_days))
-
-plot_energy_mix(tot_p_gas, tot_p_coal, tot_p_wind, tot_p_pv)
+# Perform ex post analysis
+infeasible_count = model.ex_post_analysis()
+# Plot histogram of ex-post objective values
+plot_histogram(
+    model.results.ex_post_obj_vals,
+    xlabel="Ex Post Objective Value [EUR]",
+    ylabel="Frequency of results across out-of-sample scenarios",
+    title="Distribution of Ex Post Objective Values Across Out-of-Sample Scenarios",
+    bins=50
+)
 
 
-betavalues = [0.01, 0.05, 0.1, 0.25, 0.5, 0.75, 0.9, 0.95, 0.99]
-gas_prod = []
-coal_prod = []
-gas_storage_dual = []
-coal_storage_dual = []
+# tot_p_gas = sum(model.results.var_vals['P_GAS', t] for t in range(model.n_days))
+# tot_p_coal = sum(model.results.var_vals['P_COAL', t] for t in range(model.n_days))
+# tot_p_wind = sum(model.results.var_vals['P_WIND', t] for t in range(model.n_days))
+# tot_p_pv = sum(model.results.var_vals['P_PV', t] for t in range(model.n_days))
 
-for beta in betavalues:
-    model = StochasticModel(input_data, n_scenario=1000, risk_averse=True, beta=beta, sampling_method='normal_with_extremes')
-    model.run()
-    gas_prod.append(sum(model.results.var_vals['P_GAS', t] for t in range(model.n_days))/(8760*27500))
-    coal_prod.append(sum(model.results.var_vals['P_COAL', t] for t in range(model.n_days))/(8760*35000))
-    gas_storage_dual.append(np.mean([model.results.dual_vals['storage_gas_max'] ]))
-    coal_storage_dual.append(np.mean([model.results.dual_vals['storage_coal_max'] ]))
-
-# Plot gas and coal production vs beta values
-# plot_gas_vs_coal_production(betavalues, gas_prod, coal_prod)
-# # NOTE: The more risk averse (higher beta), the less gas power production, and more coal power production. As overall trend, with some fluctuations.
+# plot_energy_mix(tot_p_gas, tot_p_coal, tot_p_wind, tot_p_pv)
 
 
-plot_storage_dual_vs_beta(betavalues, gas_storage_dual, coal_storage_dual)
+# betavalues = [0.01, 0.05, 0.1, 0.25, 0.5, 0.75, 0.9, 0.95, 0.99]
+# gas_prod = []
+# coal_prod = []
+# gas_storage_dual = []
+# coal_storage_dual = []
+
+# for beta in betavalues:
+#     model = StochasticModel(input_data, n_scenario=5000, risk_averse=True, beta=beta, sampling_method='normal_with_extremes')
+#     model.run()
+#     gas_prod.append(sum(model.results.var_vals['P_GAS', t] for t in range(model.n_days))/(8760*27500))
+#     coal_prod.append(sum(model.results.var_vals['P_COAL', t] for t in range(model.n_days))/(8760*35000))
+#     gas_storage_dual.append(np.mean([model.results.dual_vals['storage_gas_max'] ]))
+#     coal_storage_dual.append(np.mean([model.results.dual_vals['storage_coal_max'] ]))
+
+# # Plot gas and coal production vs beta values
+# # plot_gas_vs_coal_production(betavalues, gas_prod, coal_prod)
+# # # NOTE: The more risk averse (higher beta), the less gas power production, and more coal power production. As overall trend, with some fluctuations.
+
+
+# plot_storage_dual_vs_beta(betavalues, gas_storage_dual, coal_storage_dual)
 # NOTE: The more risk averse (higher beta), the higher the dual values for both gas and coal storage capacity constraints. Indicating increased value of storage capacity under risk aversion.
 
 
