@@ -284,48 +284,56 @@ class DeterministicModel():
         
         plotting_days = self.days 
         
-        # color palette
-        colors, background_color = color_palette() 
+        background_color = "#FAEEDD"
+
+        colors = [
+        "#FBBF6B",  # PV - Golden Orange
+        "#5C97D9",  # Wind - Blue
+        "#21B582",  # Gas - Dark Green
+        "#7D7878",  # Coal - Black
+        ]
     
-        fig, ax = plt.subplots(figsize=(12, 8))
+        fig, ax = plt.subplots(figsize=(10, 6))
         
         ax.step(
             plotting_days,
             [self.results.var_vals[('P_GAS', t)] for t in plotting_days],
-            label='P_GAS',
-            where='mid', color=colors[0]
+            label='GAS',
+            where='mid', color=colors[2]
         )
 
         ax.step(
             plotting_days,
             [self.results.var_vals[('P_COAL', t)] for t in plotting_days],
-            label='P_COAL',
-            where='mid', color=colors[2]
+            label='COAL',
+            where='mid', color=colors[3]
         )
         
         ax.step(
             plotting_days,
             [self.results.var_vals[('P_WIND', t)] for t in plotting_days],
-            label='P_WIND',
-            where='mid', color=colors[4]
+            label='WIND',
+            where='mid', color=colors[1]
         )
         
         ax.step(
             plotting_days,
             [self.results.var_vals[('P_PV', t)] for t in plotting_days],
-            label='P_PV',
-            where='mid', color = colors[6]
+            label='PV',
+            where='mid', color = colors[0]
         )
         
-        ax.set_xlabel('Day')
-        ax.text(0.0, 1.07, 'Optimal Power Production Over Time', transform=ax.transAxes, fontsize=14, color='black', ha ='left', fontweight='bold')
-        ax.text(0.0, 1.03, 'kWh production for each power generating unit for days 225 to 274', transform=ax.transAxes, fontsize=10, color='black', ha ='left')
-        ax.set_facecolor(background_color)
-        fig.patch.set_facecolor(background_color)
+        ax.set_xlabel('Day', fontsize=12)
+        ax.set_ylabel('Power Production [KWh]', fontsize=12)
+        ax.tick_params(axis='both', labelsize=12)
+        ax.text(0.0, 1.07, 'Optimal Power Production Schedule', transform=ax.transAxes, fontsize=18, color='black', ha ='left', fontweight='bold')
+        ax.text(0.0, 1.03, 'Energy production for each power generating unit', transform=ax.transAxes, fontsize=14, color='black', ha ='left')
+        #ax.set_facecolor(background_color)
+        #fig.patch.set_facecolor(background_color)
         ax.spines['top'].set_visible(False)
         ax.spines['right'].set_visible(False)
         plt.tight_layout()
-        ax.legend()
+        ax.legend(fontsize=12)
         ax.grid()
         plt.show()
         
@@ -336,8 +344,8 @@ class DeterministicModel():
         ax.set_xlabel('Day')
         ax.text(0.0, 1.07, 'Optimal Fuel Storage Levels Over Time', transform=ax.transAxes, fontsize=14, color='black', ha ='left', fontweight='bold')
         ax.text(0.0, 1.03, 'kWh fuel storage levels for gas and coal storage for days 225 to 274', transform=ax.transAxes, fontsize=10, color='black', ha ='left')
-        ax.set_facecolor(background_color)
-        fig.patch.set_facecolor(background_color)
+        #ax.set_facecolor(background_color)
+        #fig.patch.set_facecolor(background_color)
         ax.spines['top'].set_visible(False)
         ax.spines['right'].set_visible(False)
         plt.tight_layout()
@@ -347,13 +355,14 @@ class DeterministicModel():
         
         # Plot of purchase quantities
         fig, ax = plt.subplots(figsize=(10, 6))
-        ax.step(plotting_days,[self.results.var_vals[('Q_GAS_BUY', t)] for t in plotting_days], label='Gas Purchase Quantity', where='mid', color=colors[2])
-        ax.step(plotting_days,[self.results.var_vals[('Q_COAL_BUY', t)] for t in plotting_days], label='Coal Purchase Quantity', where='mid', color=colors[4])
+        ax.step(plotting_days,[self.results.var_vals[('Q_GAS_BUY', t)] for t in plotting_days], label='Gas', where='mid', color=colors[2])
+        ax.step(plotting_days,[self.results.var_vals[('Q_COAL_BUY', t)] for t in plotting_days], label='Coal', where='mid', color=colors[3])
         ax.set_xlabel('Day')
-        ax.text(0.0, 1.07, 'Optimal Fuel Purchase Quantities Over Time', transform=ax.transAxes, fontsize=14, color='black', ha ='left', fontweight='bold')
-        ax.text(0.0, 1.03, 'kWh fuel purchase quantities for gas and coal for days 225 to 274', transform=ax.transAxes, fontsize=10, color='black', ha ='left')
-        ax.set_facecolor(background_color)
-        fig.patch.set_facecolor(background_color)
+        ax.set_ylabel('Fuel Purchase Quantity [KWh]', fontsize=12)
+        ax.text(0.0, 1.07, 'Optimal Purchase Strategy', transform=ax.transAxes, fontsize=18, color='black', ha ='left', fontweight='bold')
+        ax.text(0.0, 1.03, 'Fuel purchase quantities for gas and coal', transform=ax.transAxes, fontsize=14, color='black', ha ='left')
+        #ax.set_facecolor(background_color)
+        #fig.patch.set_facecolor(background_color)
         ax.spines['top'].set_visible(False)
         ax.spines['right'].set_visible(False)
         plt.tight_layout()

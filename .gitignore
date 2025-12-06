@@ -1,4 +1,6 @@
 .venv/
+plot/
 __pycache__/
 uv.lock
 *.pyc
+

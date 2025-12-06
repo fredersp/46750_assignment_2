@@ -23,7 +23,7 @@
     {
       "DER_id": "P_WIND",
       "DER_type": "WIND",
-      "max_power_kW": 150000,
+      "max_power_kW": 15000,
       "min_power_ratio": 0.0,
       "max_ramp_rate_up_ratio": 1.0,
       "max_ramp_rate_down_ratio": 1.0,
@@ -33,7 +33,7 @@
     {
       "DER_id": "P_PV",
       "DER_type": "SOLAR_PV",
-      "max_power_kW": 100000,
+      "max_power_kW": 50000,
       "min_power_ratio": 0.0,
       "max_ramp_rate_up_ratio": 1.0,
       "max_ramp_rate_down_ratio": 1.0,
