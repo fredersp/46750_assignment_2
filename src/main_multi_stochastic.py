@@ -84,10 +84,10 @@ input_data = InputData(
     starting_eua_balance
 )
 
-no_stages = 12
+no_stages = 2
 stages = list(range(2, no_stages + 1))
 
-n_scenarios = 5000
+n_scenarios = 100
 
 first_stage_model= StochasticModel_First_Stage(input_data, n_scenario=n_scenarios)
 first_stage_model.run()

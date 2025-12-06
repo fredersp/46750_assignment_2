@@ -31,10 +31,10 @@ def color_palette():
 
 
 def plot_histogram(data, xlabel, ylabel, title, bins=30):
-    color_palette, background_color = color_palette()
+    colors, background_color = color_palette()
     
     fig, ax = plt.subplots(figsize=(10, 6))
-    ax.hist(data, bins=bins, color=color_palette[2], edgecolor='black', alpha=0.7)
+    ax.hist(data, bins=bins, color=colors[2], edgecolor='black', alpha=0.7)
     # Add expected cost dashed line
     mean_value = sum(data) / len(data)
     ax.axvline(mean_value, color='black', linestyle='dashed', linewidth=1)
@@ -46,17 +46,15 @@ def plot_histogram(data, xlabel, ylabel, title, bins=30):
     ax.spines['right'].set_visible(False)
     ax.text(0.0, 1.07, title, transform=ax.transAxes, fontsize=14, color='black', ha='left', fontweight='bold')
     ax.text(0.0, 1.03, ylabel, transform=ax.transAxes, fontsize=10, color='black', ha='left')
-    ax.set_facecolor(background_color)
-    fig.patch.set_facecolor(background_color)
     plt.tight_layout()
     plt.show()
 
 def plot_gas_coal_prices(time_index, coal_prices, gas_prices):
-    color_palette, background_color = color_palette()
+    colors, background_color = color_palette()
     
     fig, ax = plt.subplots(figsize=(10, 6))
-    ax.step(time_index, coal_prices, label='Coal Prices [EUR/KWh]', color=color_palette[0])
-    ax.step(time_index, gas_prices, label='Gas Prices [EUR/KWh]', color=color_palette[4])
+    ax.step(time_index, coal_prices, label='Coal Prices [EUR/KWh]', color=colors[0])
+    ax.step(time_index, gas_prices, label='Gas Prices [EUR/KWh]', color=colors[4])
     ax.set_xlabel('Time')
     ax.text(0.0, 1.07, 'Fuel Prices over Time', transform=ax.transAxes, fontsize=14, color='black', ha='left', fontweight='bold')
     ax.text(0.0, 1.03, 'Fuel Prices for gas and coal for 2024 [EUR/KWh]', transform=ax.transAxes, fontsize=10, color='black', ha='left')
@@ -68,10 +66,10 @@ def plot_gas_coal_prices(time_index, coal_prices, gas_prices):
     plt.show()
 
 def plot_eua_prices(time_index, eua_prices):
-    color_palette, background_color = color_palette()
+    colors, background_color = color_palette()
     
     fig, ax = plt.subplots(figsize=(10, 6))
-    ax.step(time_index, eua_prices, label='EUA Prices [EUR/kgCO2eq]', color=color_palette[0])
+    ax.step(time_index, eua_prices, label='EUA Prices [EUR/kgCO2eq]', color=colors[0])
     ax.set_xlabel('Time')
     ax.text(0.0, 1.07, 'EUA Prices over Time', transform=ax.transAxes, fontsize=14, color='black', ha='left', fontweight='bold')
     ax.text(0.0, 1.03, 'EUA Prices for 2024 [EUR/kgCO2eq]', transform=ax.transAxes, fontsize=10, color='black', ha='left')
@@ -83,11 +81,11 @@ def plot_eua_prices(time_index, eua_prices):
     plt.show()
     
 def plot_renewables(time_index, wind_prod, pv_prod):
-    color_palette, background_color = color_palette()
+    colors, background_color = color_palette()
     
     fig, ax = plt.subplots(figsize=(10, 6))
-    ax.step(time_index, wind_prod, label='Wind Production [KWh]', color=color_palette[0])
-    ax.step(time_index, pv_prod, label='PV Production [KWh]', color=color_palette[4])
+    ax.step(time_index, wind_prod, label='Wind Production [KWh]', color=colors[0])
+    ax.step(time_index, pv_prod, label='PV Production [KWh]', color=colors[4])
     ax.set_xlabel('Time')
     ax.text(0.0, 1.07, 'Renewable Energy Production over Time', transform=ax.transAxes, fontsize=14, color='black', ha='left', fontweight='bold')
     ax.text(0.0, 1.03, 'Wind and PV production for 2024 [KWh]', transform=ax.transAxes, fontsize=10, color='black', ha='left')
@@ -99,11 +97,11 @@ def plot_renewables(time_index, wind_prod, pv_prod):
     plt.show()
     
 def plot_gas_vs_coal_production(betavalues, gas_prod, coal_prod):
-    color_palette, background_color = color_palette()
+    colors, background_color = color_palette()
     
     fig, ax = plt.subplots(figsize=(10, 6))
-    ax.plot(betavalues, gas_prod, label='Gas Capacity Factor', color=color_palette[0], marker='o')
-    ax.plot(betavalues, coal_prod, label='Coal Capacity Factor', color=color_palette[4], marker='o')
+    ax.plot(betavalues, gas_prod, label='Gas Capacity Factor', color=colors[0], marker='o')
+    ax.plot(betavalues, coal_prod, label='Coal Capacity Factor', color=colors[4], marker='o')
     ax.set_xlabel('Beta Values')
     ax.text(0.0, 1.07, 'Gas Capacity Factor vs Coal Capacity Factor vs Beta Values', transform=ax.transAxes, fontsize=14, color='black', ha='left', fontweight='bold')
     ax.text(0.0, 1.03, 'Capacity Factors for different Risk Averse Levels', transform=ax.transAxes, fontsize=10, color='black', ha='left')
@@ -119,11 +117,11 @@ def plot_gas_vs_coal_production(betavalues, gas_prod, coal_prod):
     plt.show()
     
 def plot_storage_dual_vs_beta(betavalues, gas_storage_dual, coal_storage_dual):
-    color_palette, background_color = color_palette()
+    colors, background_color = color_palette()
     
     fig, ax = plt.subplots(figsize=(10, 6))
-    ax.plot(betavalues, gas_storage_dual, label='Gas Storage Dual Values', color=color_palette[0], marker='o')
-    ax.plot(betavalues, coal_storage_dual, label='Coal Storage Dual Values', color=color_palette[4], marker='o')
+    ax.plot(betavalues, gas_storage_dual, label='Gas Storage Dual Values', color=colors[0], marker='o')
+    ax.plot(betavalues, coal_storage_dual, label='Coal Storage Dual Values', color=colors[4], marker='o')
     ax.set_xlabel('Beta Values', fontsize=12)
     ax.text(0.0, 1.07, 'Value of Gas and Coal Storage vs More Risk-Aversion', transform=ax.transAxes, fontsize=16, color='black', ha='left', fontweight='bold')
     ax.text(0.0, 1.03, 'Average Change of Objective Value across all scenarios [EUR/100MWh]', transform=ax.transAxes, fontsize=14, color='black', ha='left')
@@ -141,12 +139,12 @@ def plot_storage_dual_vs_beta(betavalues, gas_storage_dual, coal_storage_dual):
     
 def plot_energy_mix(tot_p_gas, tot_p_coal, tot_p_wind, tot_p_pv):
     
-    color_palette, background_color = color_palette()
+    colors, background_color = color_palette()
     
     fig, ax = plt.subplots(figsize=(8, 6))
     labels = ['Gas', 'Coal', 'Wind', 'PV']
     sizes = [tot_p_gas, tot_p_coal, tot_p_wind, tot_p_pv]
-    colors = [color_palette[0], color_palette[2], color_palette[5], color_palette[7]]
+    colors = [colors[0], colors[2], colors[5], colors[7]]
     ax.pie(sizes, labels=labels, colors=colors, autopct='%1.1f%%', startangle=140)
     ax.text(0.0, 1.07, 'Energy Mix Distribution', transform=ax.transAxes, fontsize=14, color='black', ha='left', fontweight='bold')
     ax.text(0.0, 1.03, 'Proportion of Energy Production by Source', transform=ax.transAxes, fontsize=10, color='black', ha='left')
@@ -158,10 +156,10 @@ def plot_energy_mix(tot_p_gas, tot_p_coal, tot_p_wind, tot_p_pv):
     plt.show()
     
 def plot_scenario_infeasibility(n_scenarios, infeasible_count):
-    color_palette, background_color = color_palette()
+    colors, background_color = color_palette()
     
     fig, ax = plt.subplots(figsize=(10, 6))
-    ax.plot(n_scenarios, infeasible_count, marker='o', color=color_palette[0])
+    ax.plot(n_scenarios, infeasible_count, marker='o', color=colors[0])
     ax.set_xlabel('Number of Total Scenarios', fontsize=12)
     ax.text(0.0, 1.07, 'Scenario Infeasibility Analysis', transform=ax.transAxes, fontsize=18, color='black', ha='left', fontweight='bold')
     ax.text(0.0, 1.03, 'Fail Rate, number of infeasible out-of-sample scenarios / out-of-sample scenarios', transform=ax.transAxes, fontsize=14, color='black', ha='left')
@@ -174,7 +172,7 @@ def plot_scenario_infeasibility(n_scenarios, infeasible_count):
     
 
 def plot_storage_usage(storage_price, storage_level_gas, storage_level_coal):
-    color_palette, background_color = color_palette()
+    colors, background_color = color_palette()
     
     fig, ax = plt.subplots(figsize=(10, 6))
 
@@ -184,13 +182,12 @@ def plot_storage_usage(storage_price, storage_level_gas, storage_level_coal):
     coal_smooth = np.interp(x_new, storage_price, storage_level_coal)
 
     # Smooth lines
-    ax.plot(x_new, gas_smooth,  label='Gas Storage Level [KWh]',  color=color_palette[0])
-    ax.plot(x_new, coal_smooth, label='Coal Storage Level [KWh]', color=color_palette[4])
+    ax.plot(x_new, gas_smooth,  label='Gas Storage Level [KWh]',  color=colors[0])
+    ax.plot(x_new, coal_smooth, label='Coal Storage Level [KWh]', color=colors[4])
 
     # Original data points (optional but nice)
-    ax.scatter(storage_price, storage_level_gas,  color=color_palette[0], s=20)
-    ax.scatter(storage_price, storage_level_coal, color=color_palette[4], s=20)
-
+    ax.scatter(storage_price, storage_level_gas,  color=colors[0], s=20)
+    ax.scatter(storage_price, storage_level_coal, color=colors[4], s=20)
     # Labels & title
     ax.set_xlabel('Storage Cost [EUR/kWh]', fontsize=12)
     ax.set_ylabel('Storage Level [KWh]', fontsize=12)
@@ -225,14 +222,14 @@ def plot_storage_usage(storage_price, storage_level_gas, storage_level_coal):
     plt.show()
 
 def plot_fuel_purchases_over_time(time_index, total_coal_purchases_dict, total_gas_purchases_dict):
-    color_palette, background_color = color_palette()
+    colors, background_color = color_palette()
     background_color = "white"
     
     fig, ax = plt.subplots(figsize=(10, 6))
     
     # Use colors from color_palette_energy_mix
     multipliers = sorted(total_coal_purchases_dict.keys())
-    colors = [color_palette[i % len(color_palette)] for i in range(len(multipliers))]
+    colors = [colors[i % len(colors)] for i in range(len(multipliers))]
     
     for (eua_multiplier, total_coal_purchases), c in zip(total_coal_purchases_dict.items(), colors):
         ax.plot(time_index, total_coal_purchases, label=f'Coal Purchases (EUA x{eua_multiplier})', linestyle='--', color=c)

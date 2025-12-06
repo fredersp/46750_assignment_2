@@ -8,7 +8,7 @@
 - Frederik Springer Krehan (s203684)  
 - Martha Marie Halkjær Kofod (s203703)
 
-> **Note:** Some scripts require significant computation time. Comment out unnecessary analyses if only a single experiment is needed.
+> **Note:** Some scripts require significant computation time and sometimes leads to Out of Memory issues, especially the main_stochastic.py . Comment out unnecessary analyses if only a single experiment is needed.
 
 ---
 
