@@ -4,7 +4,7 @@ from data_preparation import DataPreparationCSV, DataPreparationJSON
 from deterministic_opt_model import DeterministicModel, InputData
 from plotter import *
 
-
+########### LOAD DATA AND PREPARE INPUTS FOR THE DETERMINISTIC MODEL #############
 
 # Load data files and prepare the dataset for timeseries
 data = DataPreparationCSV(datetime(2024,1,1), datetime(2024,12,31),
@@ -21,14 +21,12 @@ params = DataPreparationJSON("appliance_params.json", "storage_params.json")
 df_app = params.appliance_data_preparation()
 df_stor = params.storage_data_preparation()
 
-
-
 variables = df_app['DER_id'].tolist() + df_stor['storage_id'].tolist() + ['Q_COAL_BUY', 'Q_GAS_BUY', 'Q_EUA_BUY', 'Q_EUA_SELL', 'Q_EUA_BALANCE']
 coal_prices = df_t['Coal_Price[EUR/KWh]'].tolist()
 gas_prices = df_t['Gas_Price[EUR/KWh]'].tolist()
 eua_prices = df_t['ETS_Price[EUR/kgCO2eq]'].tolist()
-rhs_demand = 501_000_000 # DO NOT CHANGE
-# Dictionary to map coal and gas to their respective storage capacities
+rhs_demand = 501_000_000 # kWh per year
+
 rhs_storage = {
     'Q_COAL_STORAGE': df_stor.loc[df_stor['storage_id'] == 'Q_COAL_STORAGE', 'capacity_kWh_fuel'].values[0],
     'Q_GAS_STORAGE': df_stor.loc[df_stor['storage_id'] == 'Q_GAS_STORAGE', 'capacity_kWh_fuel'].values[0]
@@ -65,12 +63,16 @@ starting_eua_balance = 0  # in kgCO2eq
 storage_cost_coal = 0.001  # EUR per kWh
 storage_cost_gas = 0.001   # EUR per kWh
 
-# plot_gas_coal_prices(df_t.index, coal_prices, gas_prices)
+############ PLOT INPUT DATA #############
 
-# plot_eua_prices(df_t.index, eua_prices)
+plot_gas_coal_prices(df_t.index, coal_prices, gas_prices)
 
-# plot_renewables(df_t.index, rhs_prod_wind, rhs_prod_pv)
+plot_eua_prices(df_t.index, eua_prices)
 
+plot_renewables(df_t.index, rhs_prod_wind, rhs_prod_pv)
+
+
+############ RUN DETERMINISTIC MODEL #############
 
 input_data = InputData(
     variables,
@@ -98,7 +100,10 @@ model._save_results()
 model.plot_results()
 
 
-### Experiment: Energy Mix in Deterministic Model
+############ EXPERIMENTS #############
+
+############ EXPERIMENT 1: ENERGY MIX #############
+
 tot_p_gas = sum(model.results.var_vals['P_GAS', t] for t in range(model.n_days))
 tot_p_coal = sum(model.results.var_vals['P_COAL', t] for t in range(model.n_days))
 tot_p_wind = sum(model.results.var_vals['P_WIND', t] for t in range(model.n_days))
@@ -106,7 +111,9 @@ tot_p_pv = sum(model.results.var_vals['P_PV', t] for t in range(model.n_days))
 
 plot_energy_mix(tot_p_gas, tot_p_coal, tot_p_wind, tot_p_pv)
 
-### Experiment: Storage strategies for coal and gas in deterministic model
+
+############ EXPERIMENT 2: STORAGE STRATEGIES #############
+
 model_storage_costs = [0.0001, 0.0002, 0.0003, 0.0004, 0.001, 0.002,0.003, 0.004, 0.01]
 tot_storage_levels_coal = []
 tot_storage_levels_gas = []

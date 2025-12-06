@@ -1,5 +1,5 @@
 .venv/
-plot/
+graveyard/
 __pycache__/
 uv.lock
 *.pyc

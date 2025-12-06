@@ -2,7 +2,6 @@ import gurobipy as gp
 from gurobipy import GRB
 import matplotlib.pyplot as plt
 import random
-import seaborn as sns
 from plotter import *
 
 
@@ -49,7 +48,7 @@ class InputData:
  
  
 class StochasticModel_Second_Stage():
-    def __init__(self, input_data: InputData, name: str = "Stochastic Optimization Model", days: int = 366, n_scenario: int = 10, risk_averse: bool = False, alpha: float = 0.95, beta: float = 0.5, stage: int = 2, no_stages: int = 4, first_stage_results: dict = None, sampling_method: str = 'normal_with_extremes'):
+    def __init__(self, input_data: InputData, name: str = "Multi-Stage Stochastic Optimization Model", days: int = 366, n_scenario: int = 10, risk_averse: bool = False, alpha: float = 0.95, beta: float = 0.5, stage: int = 2, no_stages: int = 4, first_stage_results: dict = None, sampling_method: str = 'normal_with_extremes'):
         self.data = input_data
         self.first_stage = first_stage_results
         # keep numeric day count and an iterable range for loops
@@ -88,7 +87,7 @@ class StochasticModel_Second_Stage():
                 return max(lower, min(upper, 1 + random.gauss(mu, sigma)))
 
         for s in range(n_scenarios):
-            # Use one shared daily shock to keep prices/renewables correlated across drivers
+            # Use one shared daily shock
             if sampling_method == 'normal':
                 daily_shocks = [normal_sample() for _ in self.days]
             elif sampling_method == 'uniform':
@@ -98,11 +97,11 @@ class StochasticModel_Second_Stage():
             else:
                 raise ValueError(f"Unsupported sampling method: {sampling_method}")
 
-            # Cap renewables at daily capacity, e.g., 100,000 kW
+            # Cap renewables at daily capacity,
             capped_wind = [min(prod * daily_shocks[t], 24 * 15_000) for t, prod in enumerate(self.data.rhs_wind_prod)]
             capped_pv = [min(prod * daily_shocks[t], 24 * 50_000) for t, prod in enumerate(self.data.rhs_pv_prod)]
             
-            
+            # Create scenario-specific data depending on stage
             
             gas_prices = self.data.gas_prices[:self.split]
                 
@@ -148,6 +147,7 @@ class StochasticModel_Second_Stage():
                 starting_eua_balance=self.data.starting_eua_balance
             )
             scenarios.append(scenario_data)
+            
         # Split into in sample and out of sample scenarios
         split_index = int(0.8 * n_scenarios)
         self.out_of_sample_scenarios = scenarios[:split_index]
@@ -162,7 +162,7 @@ class StochasticModel_Second_Stage():
             v: [self.model.addVar(name=f"{v}_{t}") for t in self.days]
             for v in self.data.variables
         }
-        # If risk averse is true add CVaR auxillary variables
+        # If risk averse is true add CVaR and auxiliary variables
         if self.risk_averse == True:
             self.zeta = self.model.addVar(name="zeta")
             # One eta per scenario captures excess loss over zeta
@@ -171,7 +171,7 @@ class StochasticModel_Second_Stage():
     
     def _build_constraints(self):
 
-        # Annual demand must hold for each scenario (robust feasibility)
+        # Annual demand must hold for each scenario
         self.demand = [self.model.addLConstr(
             gp.quicksum(
                 self.variables['P_COAL'][t] + self.variables['P_GAS'][t]
@@ -431,7 +431,7 @@ class StochasticModel_Second_Stage():
                 + self.variables['Q_COAL_BUY'][t].x * scen.coal_prices[t]
                 + (self.variables['Q_EUA_BUY'][t].x - self.variables['Q_EUA_SELL'][t].x) * scen.eua_prices[t]
                 for t in self.days
-            ).getValue()   # convert LinExpr to float
+            ).getValue() 
             for i, scen in enumerate(self.in_sample_scenarios)
         }
 
@@ -459,9 +459,6 @@ class StochasticModel_Second_Stage():
         print("-------------------   RESULTS  -------------------")
         print("Optimal objective value:")
         print(self.results.obj_val)
-        #print("Optimal dual values:")
-        #print(self.results.dual_vals)
-
 
     def plot_results(self):
         
@@ -576,10 +573,7 @@ class StochasticModel_Second_Stage():
         print(average_ex_post_cost)
         self.results.ex_post_obj_vals = ex_post_costs
         
-        # Check wether constraints are satisfied in out-of-sample scenarios
-        
-        
-        
+        # Check whether constraints are satisfied in out-of-sample scenarios
         infeasible = [0]*len(out_of_sample_scenarios)
         infeasible_wind = 0
         infeasible_pv = 0
@@ -618,7 +612,6 @@ class StochasticModel_First_Stage():
 
     def __init__(self, input_data: InputData, name: str = "Stochastic Optimization Model", days: int = 366, n_scenario: int = 10, risk_averse: bool = False, alpha: float = 0.95, beta: float = 0.5):
         self.data = input_data
-        # keep numeric day count and an iterable range for loops
         self.n_days = int(days)
         self.days = range(self.n_days)
         self.n_scenario = range(n_scenario)
@@ -671,6 +664,7 @@ class StochasticModel_First_Stage():
                 starting_eua_balance=self.data.starting_eua_balance
             )
             scenarios.append(scenario_data)
+        
         # Split into in sample and out of sample scenarios
         split_index = int(0.8 * n_scenarios)
         self.out_of_sample_scenarios = scenarios[:split_index]
@@ -930,8 +924,6 @@ class StochasticModel_First_Stage():
         print("-------------------   RESULTS  -------------------")
         print("Optimal objective value:")
         print(self.results.obj_val)
-        #print("Optimal dual values:")
-        #print(self.results.dual_vals)
 
 
     def plot_results(self):
@@ -1047,10 +1039,7 @@ class StochasticModel_First_Stage():
         print(average_ex_post_cost)
         self.results.ex_post_obj_vals = ex_post_costs
         
-        # Check wether constraints are satisfied in out-of-sample scenarios
-        
-        
-        
+        # Check whether constraints are satisfied in out-of-sample scenarios
         infeasible = [0]*len(out_of_sample_scenarios)
         infeasible_wind = 0
         infeasible_pv = 0

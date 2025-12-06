@@ -8,6 +8,7 @@ import numpy as np
 from plotter import *
 random.seed(42)
 
+########### LOAD DATA AND PREPARE INPUTS FOR THE MULTI-STAGE STOCHASTIC MODEL #############
 
 # Load data files and prepare the dataset for timeseries
 data = DataPreparationCSV(datetime(2024,1,1), datetime(2024,12,31),
@@ -24,15 +25,12 @@ params = DataPreparationJSON("appliance_params.json", "storage_params.json")
 df_app = params.appliance_data_preparation()
 df_stor = params.storage_data_preparation()
 
-
-
 variables = df_app['DER_id'].tolist() + df_stor['storage_id'].tolist() + ['Q_COAL_BUY', 'Q_GAS_BUY', 'Q_EUA_BUY', 'Q_EUA_SELL', 'Q_EUA_BALANCE']
 coal_prices = df_t['Coal_Price[EUR/KWh]'].tolist()
 gas_prices = df_t['Gas_Price[EUR/KWh]'].tolist()
 eua_prices = df_t['ETS_Price[EUR/kgCO2eq]'].tolist()
-rhs_demand = 501_000_000 # DO NOT CHANGE
+rhs_demand = 501_000_000 # kWh per year
 
-# Dictionary to map coal and gas to their respective storage capacities
 rhs_storage = {
     'Q_COAL_STORAGE': df_stor.loc[df_stor['storage_id'] == 'Q_COAL_STORAGE', 'capacity_kWh_fuel'].values[0],
     'Q_GAS_STORAGE': df_stor.loc[df_stor['storage_id'] == 'Q_GAS_STORAGE', 'capacity_kWh_fuel'].values[0]
@@ -66,6 +64,8 @@ starting_storage_levels = {
 }
 
 starting_eua_balance = 0.0  # Assuming starting EUA balance is zero
+
+############ RUN MULTI-STAGE STOCHASTIC MODEL #############
 
 input_data = InputData(
     variables,
@@ -101,16 +101,18 @@ for stage in stages:
                                  first_stage_results=first_stage_results)
     second_stage_model.run()
     second_stage_model._save_results()
-    first_stage_results = dict(second_stage_model.results.var_vals) # Saving NEW first stage results for next stage
+    first_stage_results = dict(second_stage_model.results.var_vals) # Update for next stage
 
 
 second_stage_model.display_results()
 second_stage_model._save_results()
 second_stage_model.plot_results()
+second_stage_model.ex_post_analysis()
 
+############ PLOT DISTRIBUTIONS OF IN-SAMPLE AND OUT-OF-SAMPLE OBJECTIVE VALUES #############
 
-# Save objective values to list and create box plot
 obj_vals_list = list(second_stage_model.results.obj_vals.values())
+
 plot_histogram(
     obj_vals_list,
     xlabel="Objective Value [EUR]",
@@ -118,10 +120,6 @@ plot_histogram(
     title="Distribution of Objective Values Across Scenarios",
     bins=50
 )
-
-# Perform ex post analysis
-second_stage_model.ex_post_analysis()
-# Plot histogram of ex-post objective values
 plot_histogram(
     second_stage_model.results.ex_post_obj_vals,
     xlabel="Ex Post Objective Value [EUR]",

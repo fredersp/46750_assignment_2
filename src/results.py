@@ -10,14 +10,11 @@ obj_vals = {
     
 }
 
-# TODO: Plot Objective Values as Bar Chart
-
-
 def color_palette_objective():
     ### Color Theme ###
     background_color = "#FAEEDD"
 
-    economist_warm = [
+    color_palette = [
     "#D62828",  # Red
     "#F77F4F",  # Coral
     "#FBBF6B",  # Golden Orange
@@ -27,7 +24,7 @@ def color_palette_objective():
     "#A0E7D6",  # Very Light Teal
 
 ]
-    return economist_warm, background_color
+    return color_palette, background_color
 
 
 
@@ -49,8 +46,6 @@ for bar in bars:
                 ha='left', va='center', fontsize=10)
 
 plt.tight_layout()
-#fig.patch.set_facecolor(background_color)
-#ax.set_facecolor(background_color)
 plt.show()
 
 

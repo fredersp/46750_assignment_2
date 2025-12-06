@@ -47,11 +47,3 @@ def load_json_data(file_name: str):
 
 
 
-
-if __name__ == "__main__":
-    
-    # Example usage
-    ets_data = load_csv_data("ETSDailyPrices.csv", header=1)
-    
-    print(ets_data.head())
-    

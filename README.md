@@ -1,36 +1,49 @@
-# 46750_assignment_2
+# 46750 – Assignment 2  
+**Optimization in Modern Power Systems (Fall 2025)**  
+**Group 4**
 
-This is the code for assigment 2 in 46750
+**Group Members**  
+- Christian Witt (s203667)  
+- Frederik Heide Tvede (s201163)  
+- Frederik Springer Krehan (s203684)  
+- Martha Marie Halkjær Kofod (s203703)
+
+> **Note:** Some scripts require significant computation time. Comment out unnecessary analyses if only a single experiment is needed.
+
+---
 
 ## Table of Contents
 - Installation and Setup
 - Script Overview
+- Data
 - Usage Examples
+
+---
 
 ## Installation and Setup
 
-Clone or download the repository.
+Clone or download the repository to your local machine.
 
 ### 1. Create a virtual environment (Python 3.11+)
 
-Using Python directly:
+Using Python:
 ```bash
 py -3.11 -m venv .venv
 ```
 
-Using uv:
+Using `uv`:
 ```bash
 uv venv
 ```
 
-### 2. Activate your virtual environment
+### 2. Activate the virtual environment
 
-On Windows:
+**Windows:**
 ```bash
 .venv\Scripts\activate
 ```
 
-On macOS/Linux:
+**macOS / Linux:**
 ```bash
 source .venv/bin/activate
 ```
@@ -42,33 +55,90 @@ Using pip:
 pip install -r requirements.txt
 ```
 
-Using uv:
+Using `uv`:
 ```bash
 uv sync
 ```
 
+---
+
 ## Script Overview
 
+### `data_loader.py`
+Provides a class for loading CSV and JSON files.
+
+### `data_preparation.py`
+Uses `data_loader` to prepare raw data and returns cleaned DataFrames for use in the optimization models.
+
+### `deterministic_opt_model.py`
+Defines:
+- `InputData` class for structured model input  
+- `DeterministicModel` class implementing the optimization problem (variables, constraints, objective)
+
+Includes two model variants:  
+1. Without storage costs  
+2. With storage costs  
+
+### `main_deterministic.py`
+Loads data, runs the deterministic model, performs initial data analysis, and executes several experiments.
+
+### `stochastic_opt_model.py`
+Defines:
+- `InputData` class  
+- `StochasticModel` class with formulation and result handling  
+
+Includes two variants:  
+1. Without risk aversion  
+2. With risk aversion  
+
+### `main_stochastic.py`
+Loads data, runs the stochastic model, presents results, and performs four additional experiments.
+
+### `multi_stage_stochastic_opt_model.py`
+Contains:
+- `InputData` class  
+- `FirstStageClass` and `SecondStageClass` for the multi-stage model  
+
+Includes:  
+1. A model without risk aversion  
+2. A model with risk aversion  
+
+### `main_multi_stochastic.py`
+Loads data and runs the multi-stage stochastic model. No additional experiments are included.
+
+### `plotter.py`
+Helper module with plotting functions.
+
+### `results.py`
+Collects and visualizes key model results.
+
+---
+
 ## Data
+The dataset consists of real time-series data and approximated values based on research and ChatGPT-generated assumptions.
 
-### Sources
-The data is synthetic and created via historical data, renewables ninja and the following sources
+### Data Sources
 
-https://markets.businessinsider.com/commodities/coal-price
-https://www.energidataservice.dk/tso-gas/GasDailyBalancingPrice
+#### ETS Prices  
+https://icapcarbonaction.com/en/ets-prices  
+
+#### Gas Prices  
+https://www.energidataservice.dk/tso-gas/GasDailyBalancingPrice  
+
+#### Coal Prices  
+https://markets.businessinsider.com/commodities/coal-price  
+
+#### PV and Wind Data  
 https://www.renewables.ninja/
-https://www.gem.wiki/Coal_power_technologies?utm_source=chatgpt.com
-https://energyeducation.ca/encyclopedia/Supercritical_coal_plant?utm_source=chatgpt.com
-https://www.idc-online.com/technical_references/pdfs/civil_engineering/Supercritical_coal_fired_power_plant.pdf?utm_source=chatgpt.com
-https://iea-etsap.org/E-TechDS/PDF/E02-gas_fired_power-GS-AD-gct_FINAL.pdf?utm_source=chatgpt.com
-https://www.acer.europa.eu/sites/default/files/documents/Official_documents/Acts_of_the_Agency/Opinions/Documents/ACERs%20Opinion%2022-2019%20examples%20of%20calculation.pdf?utm_source=chatgpt.com
-https://thundersaidenergy.com/downloads/gas-to-power-project-economics/?utm_source=chatgpt.com
-https://www.volker-quaschning.de/datserv/CO2-spez/index_e.php?utm_source=chatgpt.com
-https://www.gem.wiki/Estimating_carbon_dioxide_emissions_from_gas_plants?utm_source=chatgpt.com
-https://icapcarbonaction.com/en/ets-prices
 
-### Assumptions
-Missing values are filled by the nearest values, trading on ETS market is possible everyday. 
-Conversion rate from USD to EUR 
+---
 
 ## Usage Examples
+
+To run the deterministic model:
+
+```bash
+python main_deterministic.py
+```
+
+This will generate multiple plots and result summaries automatically.

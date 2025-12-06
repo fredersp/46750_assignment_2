@@ -11,7 +11,7 @@ from plotter import *
 import copy
 random.seed(42)
 
-
+########### LOAD DATA AND PREPARE INPUTS FOR THE STOCHASTIC MODEL #############
 
 # Load data files and prepare the dataset for timeseries
 data = DataPreparationCSV(datetime(2024,1,1), datetime(2024,12,31),
@@ -28,15 +28,12 @@ params = DataPreparationJSON("appliance_params.json", "storage_params.json")
 df_app = params.appliance_data_preparation()
 df_stor = params.storage_data_preparation()
 
-
-
 variables = df_app['DER_id'].tolist() + df_stor['storage_id'].tolist() + ['Q_COAL_BUY', 'Q_GAS_BUY', 'Q_EUA_BUY', 'Q_EUA_SELL', 'Q_EUA_BALANCE']
 coal_prices = df_t['Coal_Price[EUR/KWh]'].tolist()
 gas_prices = df_t['Gas_Price[EUR/KWh]'].tolist()
 eua_prices = df_t['ETS_Price[EUR/kgCO2eq]'].tolist()
-rhs_demand = 501_000_000 # DO NOT CHANGE
+rhs_demand = 501_000_000 # kWh per year
 
-# Dictionary to map coal and gas to their respective storage capacities
 rhs_storage = {
     'Q_COAL_STORAGE': df_stor.loc[df_stor['storage_id'] == 'Q_COAL_STORAGE', 'capacity_kWh_fuel'].values[0],
     'Q_GAS_STORAGE': df_stor.loc[df_stor['storage_id'] == 'Q_GAS_STORAGE', 'capacity_kWh_fuel'].values[0]
@@ -71,6 +68,8 @@ starting_storage_levels = {
 
 starting_eua_balance = 0.0  # Assuming starting EUA balance is zero
 
+############ RUN DETERMINISTIC MODEL #############
+
 input_data = InputData(
     variables,
     gas_prices,
@@ -87,60 +86,60 @@ input_data = InputData(
     starting_storage_levels,
     starting_eua_balance
 )
+model = StochasticModel(input_data, n_scenario=5000, sampling_method='normal_with_extremes', risk_averse=True, beta=0.95)
+model.run()
+model.display_results()
+model._save_results()
+model.plot_results()
 
-# Initialize and run the stochastic model
-# model = StochasticModel(input_data, n_scenario=5000, sampling_method='normal_with_extremes', risk_averse=True, beta=0.95)
-# model.run()
-# model.display_results()
-# model._save_results()
-# model.plot_results()
+############ PLOT DISTRIBUTIONS OF IN-SAMPLE AND OUT-OF-SAMPLE OBJECTIVE VALUES #############
 
-# ### Distribution of Objective Values Across in-sampleScenarios
-# obj_vals_list = list(model.results.obj_vals.values())
-# plot_histogram(
-#     obj_vals_list,
-#     xlabel="Objective Value [EUR]",
-#     ylabel="Frequency of results across in-sample scenarios",
-#     title="Distribution of Objective Values Across Scenarios",
-#     bins=50
-# )
+obj_vals_list = list(model.results.obj_vals.values())
+plot_histogram(
+    obj_vals_list,
+    xlabel="Objective Value [EUR]",
+    ylabel="Frequency of results across in-sample scenarios",
+    title="Distribution of Objective Values Across Scenarios",
+    bins=50
+)
 
-# ### Ex Post Analysis
-# infeasible_count = model.ex_post_analysis()
-# Plot histogram of ex-post objective values
-# plot_histogram(
-#     model.results.ex_post_obj_vals,
-#     xlabel="Ex Post Objective Value [EUR]",
-#     ylabel="Frequency of results across out-of-sample scenarios",
-#     title="Distribution of Ex Post Objective Values Across Out-of-Sample Scenarios",
-#     bins=50
-# )
+infeasible_count = model.ex_post_analysis()
+plot_histogram(
+    model.results.ex_post_obj_vals,
+    xlabel="Ex Post Objective Value [EUR]",
+    ylabel="Frequency of results across out-of-sample scenarios",
+    title="Distribution of Ex Post Objective Values Across Out-of-Sample Scenarios",
+    bins=50
+)
 
-### Experiment: Energy Mix Distribution
-# tot_p_gas = sum(model.results.var_vals['P_GAS', t] for t in range(model.n_days))
-# tot_p_coal = sum(model.results.var_vals['P_COAL', t] for t in range(model.n_days))
-# tot_p_wind = sum(model.results.var_vals['P_WIND', t] for t in range(model.n_days))
-# tot_p_pv = sum(model.results.var_vals['P_PV', t] for t in range(model.n_days))
+############ EXPERIMENTS #############
 
-# plot_energy_mix(tot_p_gas, tot_p_coal, tot_p_wind, tot_p_pv)
+############ EXPERIMENT 1: ENERGY MIX #############
 
+tot_p_gas = sum(model.results.var_vals['P_GAS', t] for t in range(model.n_days))
+tot_p_coal = sum(model.results.var_vals['P_COAL', t] for t in range(model.n_days))
+tot_p_wind = sum(model.results.var_vals['P_WIND', t] for t in range(model.n_days))
+tot_p_pv = sum(model.results.var_vals['P_PV', t] for t in range(model.n_days))
 
-### Experiment: Scenario Infeasibility vs Number of Scenarios
-# infeasible_count = []
+plot_energy_mix(tot_p_gas, tot_p_coal, tot_p_wind, tot_p_pv)
 
-# n_scenarios = [100, 250, 500, 750, 1000, 1250, 1500]
+############ EXPERIMENT 2: SCENARIO INFEASIBILITY ANALYSIS #############
 
-# for n in n_scenarios:
-#     model = StochasticModel(input_data, n_scenario=n, sampling_method='normal_with_extremes')
-#     model.run()
-#     infeasible = model.ex_post_analysis()
-#     fail_rate = infeasible / (n * 0.8)
-#     infeasible_count.append(fail_rate)
+infeasible_count = []
+
+n_scenarios = [100, 250, 500, 750, 1000, 1250, 1500]
+
+for n in n_scenarios:
+    model = StochasticModel(input_data, n_scenario=n, sampling_method='normal_with_extremes')
+    model.run()
+    infeasible = model.ex_post_analysis()
+    fail_rate = infeasible / (n * 0.8)
+    infeasible_count.append(fail_rate)
 
 
-# plot_scenario_infeasibility(n_scenarios, infeasible_count)
+plot_scenario_infeasibility(n_scenarios, infeasible_count)
 
-### Experiment: Impact of EUA Price Scenarios on Fuel Purchases
+############ EXPERIMENT 3: IMPACT OF EUA PRICE SCENARIOS ON FUEL PURCHASES #############
 
 EUA_scenarios = [0.5, 1.0, 1.5, 2]
 total_coal_purchases_dict = {}
@@ -176,23 +175,19 @@ time_index = list(range(model.n_days))
 # Plot total fuel purchases over time
 plot_fuel_purchases_over_time(time_index, total_coal_purchases_dict, total_gas_purchases_dict)
 
-
+########## EXPERIMENT 4: RISK ANALYSIS #############
 
 # Initialize and run the stochastic model
 model = StochasticModel(input_data, n_scenario=5000, sampling_method='normal_with_extremes', risk_averse=False, beta=0.95)
 model.run()
 model.display_results()
 model._save_results()
-#model.plot_results()
 
 # Initialize and run the stochastic model
 model_risk = StochasticModel(input_data, n_scenario=5000, sampling_method='normal_with_extremes', risk_averse=True, beta=0.95)
 model_risk.run()
 model_risk.display_results()
 model_risk._save_results()
-#model_risk.plot_results()
-
-
 
 # Save objective values to list and create box plot
 obj_vals_list = list(model.results.obj_vals.values())

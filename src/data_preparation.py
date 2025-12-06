@@ -1,6 +1,5 @@
 from data_loader import load_csv_data, load_json_data
 import pandas as pd
-from datetime import datetime
 
 class Expando(object):
 
@@ -186,24 +185,3 @@ class DataPreparationCSV:
         
         return df
 
-if __name__ == "__main__":
-    
-    # Example usage
-    data_prep = DataPreparationCSV(datetime(2024,1,1), datetime(2024,12,31),
-        coal_file_name="CoalDailyPrices.csv",
-        ets_file_name="ETSDailyPrices.csv",
-        gas_file_name="GasDailyBalancingPrice.csv",
-        wind_file_name="wind_power_prod.csv",
-        pv_file_name="pv_power_prod.csv"
-    )
-    
-    df = data_prep.build()
-    print(df)
-    
-    # Example usage 
-    data_prep2 = DataPreparationJSON("appliance_params.json", "storage_params.json")
-    df_params = data_prep2.appliance_data_preparation()
-    print(df_params)
-    df_stor = data_prep2.storage_data_preparation()
-    print(df_stor)
-    

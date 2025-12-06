@@ -228,7 +228,7 @@ class DeterministicModel():
         )
         
         if self.storage_cost == True:
-            # add storage costs to objective
+            # Add storage costs to objective
             self.model.setObjective(
                 gp.quicksum(
                     self.variables['Q_GAS_BUY'][t] * self.data.gas_prices[t]
@@ -274,10 +274,6 @@ class DeterministicModel():
         print("-------------------   RESULTS  -------------------")
         print("Optimal objective value:")
         print(self.results.obj_val)
-        print("Optimal variable values:")
-        #print(self.results.var_vals)
-        #print("Optimal dual values:")
-        #print(self.results.dual_vals)
 
  
     def plot_results(self):
@@ -328,8 +324,6 @@ class DeterministicModel():
         ax.tick_params(axis='both', labelsize=12)
         ax.text(0.0, 1.07, 'Optimal Power Production Schedule', transform=ax.transAxes, fontsize=18, color='black', ha ='left', fontweight='bold')
         ax.text(0.0, 1.03, 'Energy production for each power generating unit', transform=ax.transAxes, fontsize=14, color='black', ha ='left')
-        #ax.set_facecolor(background_color)
-        #fig.patch.set_facecolor(background_color)
         ax.spines['top'].set_visible(False)
         ax.spines['right'].set_visible(False)
         plt.tight_layout()
@@ -344,8 +338,6 @@ class DeterministicModel():
         ax.set_xlabel('Day')
         ax.text(0.0, 1.07, 'Optimal Fuel Storage Levels Over Time', transform=ax.transAxes, fontsize=14, color='black', ha ='left', fontweight='bold')
         ax.text(0.0, 1.03, 'kWh fuel storage levels for gas and coal storage for days 225 to 274', transform=ax.transAxes, fontsize=10, color='black', ha ='left')
-        #ax.set_facecolor(background_color)
-        #fig.patch.set_facecolor(background_color)
         ax.spines['top'].set_visible(False)
         ax.spines['right'].set_visible(False)
         plt.tight_layout()
@@ -361,8 +353,6 @@ class DeterministicModel():
         ax.set_ylabel('Fuel Purchase Quantity [KWh]', fontsize=12)
         ax.text(0.0, 1.07, 'Optimal Purchase Strategy', transform=ax.transAxes, fontsize=18, color='black', ha ='left', fontweight='bold')
         ax.text(0.0, 1.03, 'Fuel purchase quantities for gas and coal', transform=ax.transAxes, fontsize=14, color='black', ha ='left')
-        #ax.set_facecolor(background_color)
-        #fig.patch.set_facecolor(background_color)
         ax.spines['top'].set_visible(False)
         ax.spines['right'].set_visible(False)
         plt.tight_layout()
