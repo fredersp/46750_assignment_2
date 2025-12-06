@@ -279,7 +279,7 @@ class DeterministicModel():
         #print("Optimal dual values:")
         #print(self.results.dual_vals)
 
-
+ 
     def plot_results(self):
         
         plotting_days = self.days 

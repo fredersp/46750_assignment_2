@@ -28,6 +28,8 @@ def color_palette():
 ]
     return economist_warm, background_color
 
+
+
 def plot_histogram(data, xlabel, ylabel, title, bins=30):
     economist_warm, background_color = color_palette()
     
